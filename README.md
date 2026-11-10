@@ -16,6 +16,7 @@ An interactive piece about the verb *augment*. The viewer answers one question w
 | Space | The switch. On the intro: begin. While writing: open the highlighted row, then choose the highlighted key. On the end screen: try again (after 2.5 s). |
 | ← ↓ / → ↑ | Move the Augmentation slider down / up (the mouse works too). |
 | R | Reset: start over at the same level (same as the Reset button). |
+| V | Voice check: shows which voice each level found on this computer, with a Test button for each. Press V again to close. |
 | Mouse | Reset, the hollow/grey toggle, the camera button, and Try again / Export on the end screen. |
 
 ## The flow
@@ -30,7 +31,7 @@ Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end scre
 | 1 Letters | white, Patrick Hand | 3 next letters | still synthetic, a little faster, shorter pauses |
 | 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | a clearer standard voice, normal pace, no pauses |
 | 3 Sentences | light blue, Inter | after one letter the keyboard goes and 4 sentences that **begin with that letter** take its place | a natural, premium voice (Siri / "natural" voices), warm and polite |
-| 4 Speaks for you | dark navy, Space Grotesk, glowing blue | after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer, slightly lower and self-assured (a different voice from level 3 when one exists) |
+| 4 Speaks for you | dark navy, Space Grotesk, glowing blue | no suggestions; after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer, slightly lower and self-assured (a different voice from level 3 when one exists) |
 
 The learner's letters are always solid, and the AI's are always hollow outlines (or faded, in "grey" mode). The screen's colours follow the slider, but **every letter keeps the font of the level it was written at**, so a sentence shows how it was made. The authorship bar under the sentence shows the learner's share (solid) against the AI's (outlined), with no numbers.
 
@@ -98,7 +99,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 ## Voices
 
-The voices come from the computer, so they sound different on each machine. Test on the laptop you'll present from. Chrome on a Mac (Samantha, Ava) or Windows 11 ("Natural" voices) gives the best range from robotic to human. If a name in `voice.prefer` isn't found, the browser's default voice is used with that level's rate and pitch.
+The voices come from the computer, so they sound different on each machine. Test on the laptop you'll present from. Chrome on a Mac (Samantha, Ava) or Windows 11 ("Natural" voices) gives the best range from robotic to human. Press **V** to see which voice each level is using and to hear each one. If a name in `voice.prefer` isn't found, the browser's default voice is used with that level's rate and pitch.
 
 ## Privacy
 

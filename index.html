@@ -456,10 +456,21 @@ body.gaze-active .board { visibility: hidden; }
 .stops { display: flex; justify-content: space-between; margin-top: 4px; padding: 0 7px; }  /* 7px = half the handle, so labels line up with it */
 .stops span { width: 0; white-space: nowrap; display: flex; justify-content: center; font-size: clamp(11px, 1.2vh, 14px); color: var(--line); transition: color 0.3s; }
 .stops span.on { color: var(--ui-text); }
+/* Voice check (press V) */
+.voice-check { position: fixed; inset: auto 24px 90px auto; z-index: 50; background: #fff; color: #222;
+  border: 1px solid #bbb; border-radius: 10px; padding: 16px 18px; font: 15px/1.4 system-ui, sans-serif;
+  box-shadow: 0 8px 30px rgba(0,0,0,.18); max-width: 520px; }
+.voice-check[hidden] { display: none; }
+.voice-check h3 { margin: 0 0 6px; font-size: 16px; }
+.voice-check table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.voice-check td { padding: 4px 6px; border-top: 1px solid #eee; vertical-align: middle; }
+.voice-check button { font: inherit; padding: 2px 10px; cursor: pointer; }
+.voice-check .vc-note { color: #666; font-size: 13px; }
 </style>
 </head>
 
 <body class="render-hollow">
+<div class="voice-check" id="voiceCheck" hidden></div>
   <header class="top">
     <p class="question js-question">What do you want to do after school today?</p>
     <div class="top-right">
@@ -623,38 +634,38 @@ const CONFIG = {
   // ---------- What the AI offers at each level ----------
   lettersAtLevel1: 3,     // level 1: single next letters offered
   wordsAtLevel2: 3,       // level 2: word completions offered
-  sentencesAtLevel3: 3,   // levels 3-4: full sentences offered (scanned first)
+  sentencesAtLevel3: 3,   // level 3 (level 4 offers none): full sentences offered (scanned first)
   sentencesAfterLetter: 4, // level 3: after the first letter the keyboard goes; this many sentences replace it
   // Level 3's sentences: plain, everyday answers, grouped by first letter.
   // Every sentence offered begins with the learner's letter ("p" → "Play
   // outside with my friends."): the "p" stays solid, the rest is hollow.
   level3Sentences: {
-    a: ["After school I want to rest.", "Ask my friend to come over.", "Art, I want to paint something.", "A snack and a nap, please."],
-    b: ["Bike ride with my brother.", "Build something with lego.", "Bake cookies with my mom.", "Be at home and relax."],
-    c: ["Call my grandma.", "Cook dinner with my dad.", "Can I go to the park?", "Color a picture."],
-    d: ["Draw a picture.", "Do nothing for a while.", "Dance to my favorite song.", "Do my homework first."],
-    e: ["Eat a snack.", "Every day I want to play outside.", "Eat dinner with my family.", "Explore the park."],
-    f: ["Find my friends and play.", "Feed my dog.", "Fly a kite outside.", "Finish my book."],
-    g: ["Go home and rest.", "Go to the park.", "Go swimming.", "Get ice cream."],
-    h: ["Hang out with my friends.", "Help my mom cook dinner.", "Have a snack.", "Home, I want to go home."],
-    i: ["I want to go home and rest.", "I want to play outside with my friends.", "I am tired and want to stop.", "I need a break."],
-    j: ["Jump on the trampoline.", "Just rest at home.", "Join my friends at the park.", "Juice and a snack, please."],
-    k: ["Kick a ball outside.", "Keep reading my book.", "Kiss my mom hello.", "Knit with my grandma."],
-    l: ["Listen to music.", "Look at my books.", "Lie down and rest.", "Learn a new game."],
-    m: ["My friend is coming over.", "Make a cake.", "Music, I want music.", "Meet my friends."],
-    n: ["Nothing, I just want quiet.", "Nap on the couch.", "No homework today, please.", "New game with my friends."],
-    o: ["Outside, I want to play outside.", "Open my new book.", "Order pizza for dinner.", "One more game, please."],
-    p: ["Play outside with my friends.", "Play video games.", "Paint a picture.", "Pet my dog."],
-    q: ["Quiet time at home.", "Quick snack, then play.", "Question: can I go out?", "Quit for today."],
-    r: ["Read a book.", "Ride my bike.", "Rest on the couch.", "Run around outside."],
-    s: ["See my friends.", "Sleep.", "Swim at the pool.", "Sing a song."],
-    t: ["Take a nap.", "Talk to my friend.", "Too tired, I want to stop.", "Turn on the TV."],
-    u: ["Use the computer.", "Under a blanket, resting.", "Up to my room to rest.", "Uno with my family."],
-    v: ["Video games with my friends.", "Visit my grandma.", "Very tired, I want to rest.", "Volleyball outside."],
-    w: ["Watch a movie.", "Walk my dog.", "Want to go home.", "Write a story."],
-    x: ["Xylophone, I want to play music.", "X-box with my brother.", "X marks the spot, a treasure hunt.", "Xtra snack time, please."],
-    y: ["Yes, I want to play outside.", "Yoga with my mom.", "You can come play with me.", "Yell and run outside."],
-    z: ["Zoo with my family.", "Zoom around on my scooter.", "Zero homework, please.", "Zip up my coat and go outside."],
+    a: ["After school I want to play outside.", "After school I want to go home and rest.", "Anything outside, I want to play.", "At home I want to watch a movie."],
+    b: ["Before dinner I want to play outside.", "Build something with lego.", "Bake cookies with my mom.", "Bike ride with my friends."],
+    c: ["Can I go to the park with my friends?", "Can I watch a movie?", "Call my grandma and tell her about my day.", "Cook dinner with my dad."],
+    d: ["Draw a picture at home.", "Do my homework, then play.", "Dance to my favorite songs.", "Do nothing, I want to rest."],
+    e: ["Eat a snack and then play outside.", "Eat dinner with my family.", "Everything, I want to have fun.", "Easy, I want to watch TV."],
+    f: ["First a snack, then I want to play.", "Find my friends and play outside.", "Feed my dog and take him for a walk.", "Finish my book."],
+    g: ["Go home and rest.", "Go to the park with my friends.", "Go swimming at the pool.", "Get ice cream with my mom."],
+    h: ["Have a snack and watch TV.", "Hang out with my friends.", "Help my mom cook dinner.", "Home, I want to go home and rest."],
+    i: ["I want to go home and rest.", "I want to play outside with my friends.", "I want to watch a movie.", "I am tired and want to stop."],
+    j: ["Just go home and rest.", "Jump on the trampoline with my sister.", "Join my friends at the park.", "Just play video games."],
+    k: ["Kick a ball around outside.", "Keep reading my book.", "Kick back and watch TV.", "Kids club, I want to go to kids club."],
+    l: ["Listen to music in my room.", "Let me play outside, please.", "Lie down and rest.", "Look at my favorite books."],
+    m: ["My friend is coming over to play.", "Maybe watch a movie.", "Make a cake with my mom.", "Meet my friends at the park."],
+    n: ["Nothing, I just want quiet.", "Nap on the couch.", "No homework today, I want to play.", "Need a break, I am tired."],
+    o: ["Outside, I want to play outside.", "Our dog needs a walk, I want to go.", "One more game with my friends.", "Open my new book and read."],
+    p: ["Play outside with my friends.", "Play video games.", "Paint a picture.", "Play with my dog."],
+    q: ["Quiet time in my room.", "Quick snack, then play outside.", "Quiet, I want to rest.", "Quit school stuff and play."],
+    r: ["Read a book in my room.", "Ride my bike outside.", "Rest on the couch.", "Run around at the park."],
+    s: ["See my friends at the park.", "Sleep, I am tired.", "Swim at the pool.", "Stay home and watch TV."],
+    t: ["Take a nap.", "Talk to my friend on the phone.", "Too tired, I want to go home.", "Try a new game with my brother."],
+    u: ["Use the computer to play games.", "Up to my room to rest.", "Under a blanket watching TV.", "Usually I play outside, so that."],
+    v: ["Video games with my friends.", "Visit my grandma.", "Very tired, I want to rest.", "Volleyball outside with my friends."],
+    w: ["Watch a movie.", "Walk my dog.", "Want to go home and rest.", "Write a story."],
+    x: ["Xbox with my brother.", "X-ray? No, I want to go home.", "Xylophone, I want to play music.", "Xbox, then dinner."],
+    y: ["Yes, I want to play outside.", "Yoga with my mom.", "You can come play with me.", "Your house, can I come over?"],
+    z: ["Zoo with my family.", "Zoom around on my scooter.", "Zero homework, I want to play.", "Zip up my coat and go outside."],
   },
   // Fallback letter order for level 1 when the phrases have no guess.
   letterFrequency: "etaoinshrdlucmfwypvbgkjqxz",
@@ -933,13 +944,15 @@ function voiceForLevel(level) {
 // (clunky AAC speech); otherwise the whole sentence in one fluent breath.
 let speechId = 0;
 let currentUtterance = null;   // kept so the browser doesn't drop it before it ends
-function speak(text, onDone) {
+function speak(text, onDone, levelOverride) {
   const myId = ++speechId;
   let done = false;
   const finish = () => { if (!done && myId === speechId) { done = true; if (onDone) onDone(); } };
   if (!("speechSynthesis" in window) || !text.trim()) { done = true; if (onDone) onDone(); return; }
+  if (!voices.length) loadVoices();
+  const wasBusy = speechSynthesis.speaking || speechSynthesis.pending;
   speechSynthesis.cancel();
-  const level = session.level;
+  const level = levelOverride != null ? levelOverride : session.level;
   const settings = CONFIG.levels[level].voice;
   const v = voiceForLevel(level);
   const pause = settings.wordPause || 0;
@@ -958,10 +971,37 @@ function speak(text, onDone) {
     // safety net if the browser never fires onend
     setTimeout(goOn, Math.max(3000, parts[i].length * 160 / settings.rate));
     currentUtterance = u;
+    speechSynthesis.resume();     // Chrome on a Mac can get stuck "paused"
     speechSynthesis.speak(u);
   };
-  say(0);
+  // Chrome can drop speech sent straight after cancel(), so wait a moment.
+  setTimeout(() => say(0), wasBusy ? 150 : 30);
 }
+// Voice check panel (V key): shows the voice each level found on this
+// computer and lets you hear each one.
+function toggleVoiceCheck() {
+  const el = document.getElementById("voiceCheck");
+  if (!el.hidden) { el.hidden = true; return; }
+  loadVoices();
+  const supported = "speechSynthesis" in window;
+  const rows = CONFIG.levels.map((lv, i) => {
+    const v = supported ? voiceForLevel(i) : null;
+    return `<tr><td>${i} ${lv.name}</td><td>${v ? v.name : "<i>browser default</i>"}</td>
+      <td><button data-level="${i}">Test</button></td></tr>`;
+  }).join("");
+  el.innerHTML = `<h3>Voice check</h3>
+    <div class="vc-note">${supported ? `This browser has ${voices.length} English voices.` : "This browser can't speak (no speech support)."}
+    Press V to close.</div>
+    <table>${rows}</table>
+    <div class="vc-note">No sound? Check the volume and that this tab isn't muted, then try Chrome.
+    New voices only show up after quitting the browser (Cmd+Q) and opening it again.</div>`;
+  el.querySelectorAll("button[data-level]").forEach(b => b.addEventListener("click", () => {
+    speak("I want to go home and rest.", null, Number(b.dataset.level));
+    b.blur();
+  }));
+  el.hidden = false;
+}
+
 function stopSpeaking() {
   speechId++;
   if ("speechSynthesis" in window) speechSynthesis.cancel();
@@ -1081,8 +1121,9 @@ function predict(level) {
     case 0:  return [];                                             // Off
     case 1:  return letterCompletions(CONFIG.lettersAtLevel1).map(tag("letters"));   // Letters only
     case 2:  return wordCompletions(CONFIG.wordsAtLevel2).map(tag("word"));          // Words only
-    default:                                                        // Sentences only (levels 3 and 4)
+    case 3:                                                         // Sentences only
       return sentenceCompletions(CONFIG.sentencesAtLevel3, true).map(tag("sentence"));
+    default: return [];                                             // Level 4 offers nothing: it writes for you
   }
 }
 
@@ -1149,7 +1190,7 @@ function buildBoard() {
       if (row.length === 0) {
         // Placeholder so the board doesn't jump when predictions appear.
         rowEl.classList.add("empty");
-        const msg = session.sentenceMode ? "" : session.level === 0 ? "augmentation off" : "no predictions";
+        const msg = session.sentenceMode || session.level === 4 ? "" : session.level === 0 ? "augmentation off" : "no predictions";
         rowEl.innerHTML = `<div class="key">${msg}</div>`;
       }
     }
@@ -2057,6 +2098,9 @@ document.addEventListener("keydown", e => {
     setLevel(Math.max(0, Math.min(CONFIG.levels.length - 1, session.level + delta)));
     return;
   }
+
+  // V = voice check: which voice each level uses, with a test button. For the presenter.
+  if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) { toggleVoiceCheck(); return; }
 
   // R = Reset (start over at the same level). For the presenter.
   if (e.key === "r" || e.key === "R") {
