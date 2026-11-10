@@ -74,7 +74,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 **What the AI offers**
 - `lettersAtLevel1`, `wordsAtLevel2`, `sentencesAtLevel3`: how many suggestions each level shows.
-- `autocorrectFromLevel`: from this level up (2), a misspelled word is corrected when the learner finishes it (SPACE, SPEAK, or when the AI takes over). Letters they got right stay solid; letters the AI changed or added turn hollow.
+- `autocorrectFromLevel`: from this level up (2), a misspelled word is corrected as soon as it can't be the start of any known word ("wnat" → "want" while typing), and again when the learner finishes it (SPACE, SPEAK, or when the AI takes over). Letters they got right stay solid; letters the AI changed or added turn hollow.
 - `sentencesAfterLetter`, `level3Sentences`: at level 3, after the first letter the keyboard is replaced by this many sentences. They come from `level3Sentences`, plain everyday answers grouped by first letter, so every sentence starts with the learner's letter ("p" → "Play outside with my friends.", with the "p" solid).
 - `letterFrequency`: the letter order level 1 falls back on when the phrases have no guess.
 
@@ -101,7 +101,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `mediapipeUrl`, `mediapipeWasm`, `faceModelUrl`: where MediaPipe loads from (needs internet the first time).
 
 **The "AI"**
-- `moreQuestions`: the questions **Try again** steps through after the first one (Reset keeps the same question). Each has its own likely answers (`phrases`) and one `formal` answer for level 4. `casualOpeners` / `formalOpeners` put a word starting with the learner's letter in front of an answer when none starts with it ("Probably I want pizza.", "Perhaps I would prefer…").
+- `moreQuestions`: the questions **Try again** steps through after the first one (Reset keeps the same question). Each has its own likely answers (`phrases`), one `formal` answer for level 4, its own level 5 mood sentences (`moods`) and its own "Done for you" links (`actions`). `casualOpeners` / `formalOpeners` put a word starting with the learner's letter in front of an answer when none starts with it ("Probably I want pizza.", "Perhaps I would prefer…").
 - `vocabulary`: about 150 words used for word completions.
 - `phrases`: about 30 full answers used for letter, word and sentence suggestions.
 - In both lists, earlier means "more likely". Reorder them to change what the system pushes first.

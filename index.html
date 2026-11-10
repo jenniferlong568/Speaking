@@ -858,6 +858,9 @@ const CONFIG = {
   // machine puts a word in front that does ("Probably, ..." / "Perhaps ...").
   moreQuestions: [
     { question: "What would you like for lunch?",
+      moods: { tired: "I am too fatigued to eat much; a light snack will suffice.", happy: "I would be delighted to have pizza with my friends.",
+        sad: "I have little appetite today; perhaps just some soup.", frustrated: "I would rather skip lunch and be left alone.", calm: "A simple sandwich would be perfectly adequate, thank you." },
+      actions: ["Order: pizza, 12:00 PM", "Message cafeteria: no peanuts", "Charge lunch account $4.50", "Log meal for parents"],
       formal: "I would prefer a nutritious meal, followed by a brief period of rest.",
       phrases: [
         "I want pizza.", "I want a sandwich.", "I want chicken nuggets.", "I want pasta.",
@@ -866,6 +869,9 @@ const CONFIG = {
         "A salad, please.", "Whatever mom packed.", "Noodles.", "Grilled cheese.",
       ] },
     { question: "How are you feeling right now?",
+      moods: { tired: "I am exhausted and require immediate rest.", happy: "I am feeling exceptionally well, thank you for asking.",
+        sad: "I am feeling rather low and would appreciate some support.", frustrated: "I am frustrated and would prefer not to continue.", calm: "I am entirely calm and content at the moment." },
+      actions: ["Notify school counselor", "Message Mom: feeling tired", "Add to mood log, 5:20 PM", "Book nurse visit"],
       formal: "I am feeling somewhat fatigued and would appreciate a moment to recover.",
       phrases: [
         "I feel happy.", "I am tired.", "I feel good.", "I am sad.",
@@ -874,6 +880,9 @@ const CONFIG = {
         "Great, thanks.", "Sleepy.", "Frustrated.", "Nervous.",
       ] },
     { question: "What did you do this weekend?",
+      moods: { tired: "I rested extensively at home and recovered my energy.", happy: "I had a wonderful weekend with my family and friends.",
+        sad: "My weekend was quiet and somewhat lonely.", frustrated: "My weekend was disappointing, and I would rather not discuss it.", calm: "I spent a peaceful weekend reading at home." },
+      actions: ["Post photos to class page", "Share weekend log with teacher", "Tag friends: Sam, Maya", "Add to journal"],
       formal: "I spent the weekend resting at home and attending to my responsibilities.",
       phrases: [
         "I played with my friends.", "I went to the park.", "I watched movies.", "I visited my grandma.",
@@ -882,6 +891,9 @@ const CONFIG = {
         "Played soccer.", "Went shopping with mom.", "Read books.", "Baked cookies.",
       ] },
     { question: "Who do you want to sit with today?",
+      moods: { tired: "I would prefer to sit alone somewhere quiet today.", happy: "I would love to sit with my best friend today.",
+        sad: "I would like to sit near the teacher today, please.", frustrated: "I would prefer to sit away from the group today.", calm: "I am happy to sit wherever I am placed." },
+      actions: ["Update seating chart", "Message teacher: seat by window", "Move Sam to table 3", "Notify group"],
       formal: "I would prefer to sit independently today, if that is acceptable.",
       phrases: [
         "I want to sit with my friend.", "I want to sit by the window.", "I want to sit alone.", "I want to sit with you.",
@@ -1117,6 +1129,18 @@ function correctWordAt(start, end) {
   sentence.splice(start, end - start, ...out);
   return true;
 }
+// While typing (level 2+): as soon as the word being typed can't be the start
+// of any word the AI knows ("wnat", "plsy"), it's fixed on the spot.
+function autocorrectLive() {
+  if (session.level < CONFIG.autocorrectFromLevel || !sentence.length) return;
+  const isLetter = c => /[a-z']/i.test(c.char);
+  let start = sentence.length;
+  while (start > 0 && isLetter(sentence[start - 1])) start--;
+  const word = sentence.slice(start).map(c => c.char).join("").toLowerCase();
+  if (word.length < 3 || knownWords().some(w => w.startsWith(word))) return;
+  correctWordAt(start, sentence.length);
+}
+
 // Correct every finished word (and the last one too if includeLast).
 function autocorrect(includeLast) {
   if (session.level < CONFIG.autocorrectFromLevel) return false;
@@ -1748,7 +1772,7 @@ function chooseItem(r, i) {
   session.selections++;
   flashKey(r, i);
 
-  if (item.type === "letter")     addChar(item.value, "learner");
+  if (item.type === "letter")     { addChar(item.value, "learner"); autocorrectLive(); }
   if (item.type === "space")      { addChar(" ", "learner"); autocorrect(false); }
   if (item.type === "delete")     deleteChar();
   if (item.type === "speak" && sentenceText().trim()) {
@@ -1861,14 +1885,16 @@ function joinOpener(opener, ph) {
 // ---------- Questions ----------
 // Question 0 is the original one; "Try again" steps through the rest.
 const QUESTIONS = [
-  { question: CONFIG.question, phrases: CONFIG.phrases, level3Sentences: CONFIG.level3Sentences, autoSentences: CONFIG.autoSentences },
+  { question: CONFIG.question, phrases: CONFIG.phrases, level3Sentences: CONFIG.level3Sentences, autoSentences: CONFIG.autoSentences,
+    moods: CONFIG.faceRead.moods, actions: CONFIG.takeoverActions.links },
   ...CONFIG.moreQuestions.map(q => {
     const auto = { default: q.formal };
     for (const [l, op] of Object.entries(CONFIG.formalOpeners)) {
       if (op[0].toLowerCase() !== l) continue;
       auto[l] = /^I\b/.test(q.formal) && l === "i" ? q.formal : joinOpener(op, q.formal);
     }
-    return { question: q.question, phrases: q.phrases, level3Sentences: {}, autoSentences: auto };
+    return { question: q.question, phrases: q.phrases, level3Sentences: {}, autoSentences: auto,
+      moods: q.moods || CONFIG.faceRead.moods, actions: q.actions || CONFIG.takeoverActions.links };
   }),
 ];
 let questionIndex = 0;
@@ -1879,6 +1905,8 @@ function setQuestion(i) {
   CONFIG.phrases = q.phrases;
   CONFIG.level3Sentences = q.level3Sentences;
   CONFIG.autoSentences = q.autoSentences;
+  CONFIG.faceRead.moods = q.moods;           // level 5's sentences
+  CONFIG.takeoverActions.links = q.actions;  // the "Done for you" links
   dictionary = null;    // autocorrect learns the new answers' words
   document.querySelectorAll(".js-question").forEach(el => el.textContent = CONFIG.question);
 }
