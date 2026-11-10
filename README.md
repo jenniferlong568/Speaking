@@ -1,4 +1,4 @@
-# Whose Words?
+# Augmented Keyboard Interaction
 
 An interactive piece about the verb *augment*. The viewer answers one question with a single switch (the spacebar). A scripted "AI" offers to finish their words and sentences. Every letter remembers who wrote it: the learner's letters are solid, and the AI's letters are hollow outlines. As augmentation rises, the screen moves from handwritten paper to a glowing machine, and the voice from robotic to human.
 
@@ -55,6 +55,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `voice.wordPause`: silence (ms) after every word. 450 at level 0, 180 at level 1, 0 (fluent) from level 2 up.
 - `voiceLang`: only voices with this accent are used (`en-US`, American). If the computer has none, any English voice is used.
 - `voice.notSameAs`: a level whose voice to avoid, so level 4 doesn't sound the same as level 3.
+- `showLevelNames`: show the level names under the Augmentation slider (`false` = no labels).
 - `startLevel`: the level when the page first opens.
 
 **Look**
@@ -71,6 +72,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 **What the AI offers**
 - `lettersAtLevel1`, `wordsAtLevel2`, `sentencesAtLevel3`: how many suggestions each level shows.
+- `autocorrectFromLevel`: from this level up (2), a misspelled word is corrected when the learner finishes it (SPACE, SPEAK, or when the AI takes over). Letters they got right stay solid; letters the AI changed or added turn hollow.
 - `sentencesAfterLetter`, `level3Sentences`: at level 3, after the first letter the keyboard is replaced by this many sentences. They come from `level3Sentences`, plain everyday answers grouped by first letter, so every sentence starts with the learner's letter ("p" → "Play outside with my friends.", with the "p" solid).
 - `letterFrequency`: the letter order level 1 falls back on when the phrases have no guess.
 

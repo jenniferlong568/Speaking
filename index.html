@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Whose Words?</title>
+<title>Augmented Keyboard Interaction</title>
 
 <!-- One font per augmentation level, from handwritten to machine-made:
      0 Waiting for the Sunrise, 1 Patrick Hand, 2 Atkinson Hyperlegible,
@@ -524,7 +524,7 @@ body.gaze-active .board { visibility: hidden; }
 
   <!-- Intro screen -->
   <div class="screen show" id="introScreen">
-    <div class="intro-title">Whose Words?</div>
+    <div class="intro-title">Augmented Keyboard Interaction</div>
     <p class="intro-line">Answer the question using only the spacebar.</p>
     <p class="hint">Press space to begin</p>
   </div>
@@ -606,6 +606,7 @@ const CONFIG = {
       voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Natural", "Google US English"], rate: 1.05, pitch: 0.8, wordPause: 0, notSameAs: 3 } },
   ],
   voiceLang: "en-US",     // only voices with this accent are used (en-US = American)
+  showLevelNames: false,  // labels under the Augmentation slider ("0 Off", "1 Letters", ...)
   startLevel: 0,          // level the slider is on when the page first opens (Reset and Try again keep the current level)
 
   // ---------- Look ----------
@@ -616,7 +617,7 @@ const CONFIG = {
 
   // ---------- Words on screen ----------
   question:    "What do you want to do after school today?",
-  introTitle:  "Whose Words?",
+  introTitle:  "Augmented Keyboard Interaction",
   introLine:   "Answer the question using only the spacebar.",
   sentLine:    "Sent to teacher.",
 
@@ -636,6 +637,7 @@ const CONFIG = {
   lettersAtLevel1: 3,     // level 1: single next letters offered
   wordsAtLevel2: 3,       // level 2: word completions offered
   sentencesAtLevel3: 3,   // level 3 (level 4 offers none): full sentences offered (scanned first)
+  autocorrectFromLevel: 2, // from this level up, misspelled words are corrected when finished (fixed letters turn hollow)
   sentencesAfterLetter: 4, // level 3: after the first letter the keyboard goes; this many sentences replace it
   // Level 3's sentences: plain, everyday answers, grouped by first letter.
   // Every sentence offered begins with the learner's letter ("p" → "Play
@@ -901,6 +903,81 @@ function addChar(char, author) {
 // Add a run of text, one character at a time, all with the same author.
 function addText(text, author) {
   for (const char of text) addChar(char, author);
+}
+
+// ---------- Autocorrect (levels 2, 3 and 4) ----------
+// When the learner finishes a word, a misspelled word is replaced by the
+// closest word the "AI" knows. Letters the learner got right stay theirs
+// (solid); letters the machine changed or added become the AI's (hollow);
+// letters it threw away are gone.
+let dictionary = null;
+function knownWords() {
+  if (dictionary) return dictionary;
+  const all = [CONFIG.vocabulary.join(" "), ...CONFIG.phrases,
+    ...Object.values(CONFIG.level3Sentences).flat(), ...Object.values(CONFIG.autoSentences)].join(" ");
+  dictionary = [...new Set(all.toLowerCase().match(/[a-z']+/g))];
+  return dictionary;
+}
+// Edit distance that counts a swapped pair ("teh") as one mistake.
+function editTable(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d;
+}
+function bestCorrection(word) {
+  const w = word.toLowerCase();
+  const words = knownWords();
+  if (w.length < 3 || words.includes(w)) return null;
+  const allowed = w.length <= 4 ? 1 : 2;
+  let best = null, bestD = allowed + 1;
+  for (const cand of words) {                    // earlier = more likely, so ties keep the first
+    if (Math.abs(cand.length - w.length) > allowed) continue;
+    const dist = editTable(w, cand)[w.length][cand.length];
+    if (dist < bestD) { best = cand; bestD = dist; }
+  }
+  return best;
+}
+// Replace sentence[start..end) (one word) with the corrected spelling.
+function correctWordAt(start, end) {
+  const old = sentence.slice(start, end);
+  const typed = old.map(c => c.char).join("");
+  const fix = bestCorrection(typed);
+  if (!fix) return false;
+  const a = typed.toLowerCase(), d = editTable(a, fix);
+  const out = [];
+  let i = a.length, j = fix.length;
+  const aiChar = ch => ({ char: ch, author: "ai", time: Date.now(), level: session.level });
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === fix[j - 1] && d[i][j] === d[i - 1][j - 1]) { out.unshift(old[i - 1]); i--; j--; }
+    else if (i > 1 && j > 1 && a[i - 1] === fix[j - 2] && a[i - 2] === fix[j - 1] && d[i][j] === d[i - 2][j - 2] + 1) {
+      out.unshift(aiChar(fix[j - 2]), aiChar(fix[j - 1])); i -= 2; j -= 2; }
+    else if (i > 0 && j > 0 && d[i][j] === d[i - 1][j - 1] + 1) { out.unshift(aiChar(fix[j - 1])); i--; j--; }
+    else if (j > 0 && d[i][j] === d[i][j - 1] + 1) { out.unshift(aiChar(fix[j - 1])); j--; }
+    else i--;                                    // a letter the machine threw away
+  }
+  sentence.splice(start, end - start, ...out);
+  return true;
+}
+// Correct every finished word (and the last one too if includeLast).
+function autocorrect(includeLast) {
+  if (session.level < CONFIG.autocorrectFromLevel) return false;
+  let changed = false;
+  const isLetter = c => /[a-z']/i.test(c.char);
+  for (let i = sentence.length - 1; i >= 0;) {
+    if (!isLetter(sentence[i])) { i--; continue; }
+    let start = i;
+    while (start > 0 && isLetter(sentence[start - 1])) start--;
+    const finished = i + 1 < sentence.length;
+    if ((finished || includeLast) && sentence.slice(start, i + 1).some(c => c.author === "learner")) {
+      if (correctWordAt(start, i + 1)) changed = true;
+    }
+    i = start - 1;
+  }
+  return changed;
 }
 
 // Remove the last character, whoever wrote it.
@@ -1319,9 +1396,11 @@ function chooseItem(r, i) {
   flashKey(r, i);
 
   if (item.type === "letter")     addChar(item.value, "learner");
-  if (item.type === "space")      addChar(" ", "learner");
+  if (item.type === "space")      { addChar(" ", "learner"); autocorrect(false); }
   if (item.type === "delete")     deleteChar();
   if (item.type === "speak" && sentenceText().trim()) {
+    autocorrect(true);
+    renderSentence();
     speak(sentenceText());
     later(showEnd, 400);   // the learner chose to speak: that's the end
   }
@@ -1409,6 +1488,7 @@ function likelySentences(max) {
 
 function enterSentenceMode() {
   session.sentenceMode = true;
+  if (autocorrect(false)) renderSentence();     // fix earlier words; the new letter stays as it is
   boardAreaEl.classList.add("gone");                 // the keyboard fades away...
   clearInterval(scanTimer);
   scan.mode = "rows";
@@ -1446,6 +1526,7 @@ function startTakeover() {
   scan.mode = "rows";
   scan.row = -1;                 // no highlight while the system writes
   boardAreaEl.classList.add("gone");   // the keyboard goes away
+  if (autocorrect(false)) renderSentence();
 
   const last = sentence[sentence.length - 1];
   const before = sentence[sentence.length - 2];
@@ -1500,7 +1581,7 @@ let predictionsFaded = false;   // true while the prediction row is faded out
 // Labels under the slider: "0 Off", "1 Letters", ...
 CONFIG.levels.forEach((lv, i) => {
   const span = document.createElement("span");
-  span.textContent = `${i} ${lv.name}`;
+  span.textContent = CONFIG.showLevelNames ? `${i} ${lv.name}` : "";
   stopsEl.appendChild(span);
 });
 
