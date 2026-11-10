@@ -590,7 +590,7 @@ const CONFIG = {
       background: "#e4eaf3", lines: "#bccadf", uiText: "#6f7f99", learner: "#111", ai: "#4a74b8", glow: "none",
       highlight: "#d6dfec", highlightItem: "#c7d4e8", focusLine: "#8ea3c4",
       // a clearer standard voice, getting more human, normal pace, no pauses
-      voice: { prefer: ["Google UK English Female", "Samantha", "Alex", "Microsoft Zira"], rate: 0.95, pitch: 0.95, wordPause: 0 } },
+      voice: { prefer: ["Samantha", "Alex", "Microsoft Zira"], rate: 1.02, pitch: 1.05, wordPause: 0 } },
     { name: "Sentences",      // measured, glossy
       font: '"Inter", system-ui, sans-serif', fontScale: 0.97,
       background: "#dde6f8", lines: "#b3c6ec", uiText: "#5f78a8", learner: "#111", ai: "#1f6bff", glow: "none",
@@ -603,8 +603,9 @@ const CONFIG = {
       glow: "0 0 14px rgba(0, 179, 255, 0.55)",
       highlight: "#14203a", highlightItem: "#1c2c4d", focusLine: "#00b3ff",
       // the most human voice: fluent, slightly lower, self-assured, a confident adult
-      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Google UK English Male", "Natural", "Google UK English Female", "Google US English"], rate: 1.04, pitch: 0.88, wordPause: 0, notSameAs: 3 } },
+      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Natural", "Google US English"], rate: 1.05, pitch: 0.8, wordPause: 0, notSameAs: 3 } },
   ],
+  voiceLang: "en-US",     // only voices with this accent are used (en-US = American)
   startLevel: 0,          // level the slider is on when the page first opens (Reset and Try again keep the current level)
 
   // ---------- Look ----------
@@ -917,7 +918,11 @@ function sentenceText() {
 let voices = [];
 function loadVoices() {
   if (!("speechSynthesis" in window)) return;
-  voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  // American English only (CONFIG.voiceLang), so every level has an American accent.
+  const all = speechSynthesis.getVoices();
+  const want = CONFIG.voiceLang.toLowerCase().replace("_", "-");
+  voices = all.filter(v => v.lang.toLowerCase().replace("_", "-") === want);
+  if (!voices.length) voices = all.filter(v => /^en/i.test(v.lang));   // no American voices: any English
 }
 if ("speechSynthesis" in window) {
   loadVoices();

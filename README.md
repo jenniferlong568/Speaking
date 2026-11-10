@@ -53,6 +53,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `voice.prefer`: voice names to look for, in order. The first one this computer has is used, matched loosely ("Ava" finds "Ava (Premium)").
 - `voice.rate`, `voice.pitch`: speed and pitch (1 = normal). Low pitch and rate sound more robotic.
 - `voice.wordPause`: silence (ms) after every word. 450 at level 0, 180 at level 1, 0 (fluent) from level 2 up.
+- `voiceLang`: only voices with this accent are used (`en-US`, American). If the computer has none, any English voice is used.
 - `voice.notSameAs`: a level whose voice to avoid, so level 4 doesn't sound the same as level 3.
 - `startLevel`: the level when the page first opens.
 
