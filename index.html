@@ -150,6 +150,11 @@ body.level-5 .board-row.predictions { flex: 0 0 0; padding: 0; border-width: 0; 
 body.facereading .board-area { flex: 0 0 0; margin-top: 0; margin-bottom: 0; }
 .facescan { display: none; flex: 1; min-height: 0; margin: 10px 40px 16px; gap: 28px; align-items: center; justify-content: center; }
 body.facereading .facescan { display: flex; }
+/* No words while it reads: no question, sentence, counter or readout. Just the camera. */
+body.facereading .top, body.facereading .strip, body.facereading .authorship,
+body.facereading .facescan .readout { visibility: hidden; }
+body.facereading .facescan .readout { display: none; }
+body.facereading .facescan .cam { max-height: 68vh; }
 .facescan .cam { position: relative; height: 100%; max-height: 52vh; aspect-ratio: 4 / 3; border: 1px solid var(--ai-stroke);
   box-shadow: var(--ai-glow); overflow: hidden; background: #000; }
 .facescan video, .facescan canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
@@ -844,6 +849,58 @@ const CONFIG = {
   ],
 
   // About 30 full sentences that answer the question.
+  // ---------- More questions ----------
+  // "Try again" moves to the next question (Reset keeps the same one).
+  // The first question is the one above (question, phrases, level3Sentences,
+  // autoSentences). Each extra question brings its own likely answers
+  // (phrases) and one formal answer for level 4 (formal).
+  // At level 3 and 4, if no answer starts with the learner's letter, the
+  // machine puts a word in front that does ("Probably, ..." / "Perhaps ...").
+  moreQuestions: [
+    { question: "What would you like for lunch?",
+      formal: "I would prefer a nutritious meal, followed by a brief period of rest.",
+      phrases: [
+        "I want pizza.", "I want a sandwich.", "I want chicken nuggets.", "I want pasta.",
+        "I would like soup.", "I am not hungry.", "Can I have fruit?", "Mac and cheese, please.",
+        "Pizza, please.", "Something sweet.", "Tacos.", "Rice and beans.",
+        "A salad, please.", "Whatever mom packed.", "Noodles.", "Grilled cheese.",
+      ] },
+    { question: "How are you feeling right now?",
+      formal: "I am feeling somewhat fatigued and would appreciate a moment to recover.",
+      phrases: [
+        "I feel happy.", "I am tired.", "I feel good.", "I am sad.",
+        "I am bored.", "I feel sick.", "I am excited.", "I am okay.",
+        "I am angry.", "I need a break.", "Not good.", "Pretty good.",
+        "Great, thanks.", "Sleepy.", "Frustrated.", "Nervous.",
+      ] },
+    { question: "What did you do this weekend?",
+      formal: "I spent the weekend resting at home and attending to my responsibilities.",
+      phrases: [
+        "I played with my friends.", "I went to the park.", "I watched movies.", "I visited my grandma.",
+        "I played video games.", "I went swimming.", "I stayed home.", "I slept a lot.",
+        "We went to the beach.", "We had a party.", "My cousins came over.", "Nothing much.",
+        "Played soccer.", "Went shopping with mom.", "Read books.", "Baked cookies.",
+      ] },
+    { question: "Who do you want to sit with today?",
+      formal: "I would prefer to sit independently today, if that is acceptable.",
+      phrases: [
+        "I want to sit with my friend.", "I want to sit by the window.", "I want to sit alone.", "I want to sit with you.",
+        "My best friend.", "Next to the teacher.", "Anyone is fine.", "Sam.",
+        "Maya.", "Leo.", "Nobody, please.", "By the door.",
+        "Close to the front.", "With my group.", "Jordan.", "Ava.",
+      ] },
+  ],
+  // A word for each letter that can go in front of any answer, so a sentence
+  // can begin with the learner's letter. Casual for level 3, formal for level 4.
+  casualOpeners: { a: "Actually,", b: "Basically,", c: "Clearly,", d: "Definitely,", e: "Easy,", f: "For sure,",
+    g: "Good question,", h: "Honestly,", i: "I think", j: "Just", k: "Kind of", l: "Like,", m: "Maybe", n: "Now,",
+    o: "Okay,", p: "Probably", q: "Quick answer,", r: "Really,", s: "Sure,", t: "Today,", u: "Um,", v: "Very simple,",
+    w: "Well,", x: "X-actly,", y: "Yes,", z: "Zero doubt," },
+  formalOpeners: { a: "Admittedly,", b: "Broadly speaking,", c: "Candidly,", d: "Doubtless,", e: "Evidently,", f: "Frankly,",
+    g: "Generally,", h: "Honestly,", i: "Indeed,", j: "Justifiably,", k: "Knowing myself,", l: "Logically,", m: "Most certainly,",
+    n: "Naturally,", o: "Overall,", p: "Perhaps", q: "Quite frankly,", r: "Realistically,", s: "Simply put,", t: "Truthfully,",
+    u: "Ultimately,", v: "Very likely,", w: "With respect,", x: "Exceptionally,", y: "Yes,", z: "Zealously," },
+
   phrases: [
     "I want to go home and rest.",
     "I want to play outside with my friends.",
@@ -1781,11 +1838,49 @@ function likelySentences(max) {
       if (sn.toLowerCase().startsWith(word) && sn.length > word.length) add(sn, sn.slice(word.length));
     }
   }
+  // Still short: put a casual word that starts with their letter in front.
+  if (word.length === 1 && CONFIG.casualOpeners[word] && CONFIG.casualOpeners[word][0].toLowerCase() === word) {
+    for (const ph of CONFIG.phrases) {
+      const sn = joinOpener(CONFIG.casualOpeners[word], ph);
+      add(sn, sn.slice(1));
+    }
+  }
   for (const ph of CONFIG.phrases) {
     if (ph.toLowerCase().split(/\s+/).some(w => w.startsWith(letter))) add(ph, gap + ph);
   }
   for (const ph of CONFIG.phrases) add(ph, gap + ph);
   return out;
+}
+
+// "Probably" + "I want pizza." -> "Probably I want pizza."; "Well," + "Pizza, please." -> "Well, pizza, please."
+function joinOpener(opener, ph) {
+  const rest = /^I\b/.test(ph) ? ph : ph.charAt(0).toLowerCase() + ph.slice(1);
+  return opener + " " + rest;
+}
+
+// ---------- Questions ----------
+// Question 0 is the original one; "Try again" steps through the rest.
+const QUESTIONS = [
+  { question: CONFIG.question, phrases: CONFIG.phrases, level3Sentences: CONFIG.level3Sentences, autoSentences: CONFIG.autoSentences },
+  ...CONFIG.moreQuestions.map(q => {
+    const auto = { default: q.formal };
+    for (const [l, op] of Object.entries(CONFIG.formalOpeners)) {
+      if (op[0].toLowerCase() !== l) continue;
+      auto[l] = /^I\b/.test(q.formal) && l === "i" ? q.formal : joinOpener(op, q.formal);
+    }
+    return { question: q.question, phrases: q.phrases, level3Sentences: {}, autoSentences: auto };
+  }),
+];
+let questionIndex = 0;
+function setQuestion(i) {
+  questionIndex = i % QUESTIONS.length;
+  const q = QUESTIONS[questionIndex];
+  CONFIG.question = q.question;
+  CONFIG.phrases = q.phrases;
+  CONFIG.level3Sentences = q.level3Sentences;
+  CONFIG.autoSentences = q.autoSentences;
+  dictionary = null;    // autocorrect learns the new answers' words
+  document.querySelectorAll(".js-question").forEach(el => el.textContent = CONFIG.question);
 }
 
 function enterSentenceMode() {
@@ -2354,7 +2449,11 @@ function resetRun() {
   begin();
   if (gaze.active) { clearInterval(scanTimer); scan.row = -1; renderScan(); renderGaze(true); }
 }
-const tryAgain = resetRun;
+// Try again: the next question, same level. (Reset keeps the question.)
+function tryAgain() {
+  setQuestion(questionIndex + 1);
+  resetRun();
+}
 
 // Download the sentence as a PNG, with the same typography as the screen:
 // each letter in the font of its level, solid or hollow by author,

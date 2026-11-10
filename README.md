@@ -32,7 +32,7 @@ Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end scre
 | 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | a clearer standard voice, normal pace, no pauses |
 | 3 Sentences | light blue, Inter | after one letter the keyboard goes and 4 sentences that **begin with that letter** take its place | a natural, premium voice (Siri / "natural" voices), warm and polite |
 | 4 Speaks for you | dark navy, Space Grotesk, glowing blue | no suggestions; after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer, slightly lower and self-assured (a different voice from level 3 when one exists) |
-| 5 Reads your face | near-black, IBM Plex Mono, glowing pink | nothing: the camera turns on by itself, a face box tracks the learner, it announces a mood with a confident percentage ("MOOD: TIRED · 92%"), writes a sentence for that mood and speaks it | the level 4 voice, lower and more controlled |
+| 5 Reads your face | near-black, IBM Plex Mono, glowing pink | nothing: the camera turns on by itself, a face box tracks the learner, it announces a mood with a confident percentage ("MOOD: TIRED · 92%"), writes a sentence for that mood and speaks it. While it reads, the screen shows only the camera: no question, no text, no explanation | the level 4 voice, lower and more controlled |
 
 The learner's letters are always solid, and the AI's are always hollow outlines (or faded, in "grey" mode). The screen's colours follow the slider, but **every letter keeps the font of the level it was written at**, so a sentence shows how it was made. The authorship bar under the sentence shows the learner's share (solid) against the AI's (outlined), with no numbers.
 
@@ -101,6 +101,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `mediapipeUrl`, `mediapipeWasm`, `faceModelUrl`: where MediaPipe loads from (needs internet the first time).
 
 **The "AI"**
+- `moreQuestions`: the questions **Try again** steps through after the first one (Reset keeps the same question). Each has its own likely answers (`phrases`) and one `formal` answer for level 4. `casualOpeners` / `formalOpeners` put a word starting with the learner's letter in front of an answer when none starts with it ("Probably I want pizza.", "Perhaps I would prefer…").
 - `vocabulary`: about 150 words used for word completions.
 - `phrases`: about 30 full answers used for letter, word and sentence suggestions.
 - In both lists, earlier means "more likely". Reorder them to change what the system pushes first.
