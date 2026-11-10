@@ -5,34 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whose Words?</title>
 
-<!-- Atkinson Hyperlegible for the composed sentence. If it can't load
-     (offline), the font stack below falls back to a system sans-serif. -->
+<!-- One font per augmentation level, from handwritten to machine-made:
+     0 Waiting for the Sunrise, 1 Patrick Hand, 2 Atkinson Hyperlegible,
+     3 Inter, 4 Space Grotesk. If they can't load (offline), each level
+     falls back to a system font. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Inter:wght@400;500&family=Patrick+Hand&family=Space+Grotesk:wght@400;500&family=Waiting+for+the+Sunrise&display=swap" rel="stylesheet">
 
 <style>
 /* =========================================================
    COLORS AND SIZES
-   Defaults only: the CONFIG object in the script (top of the
-   <script> block) overrides these when the page loads, so
-   change colors there.
+   Defaults only. Each augmentation level has its own colours and
+   font in CONFIG.levels (top of the <script> block); the page
+   swaps these variables whenever the slider moves.
    ========================================================= */
 :root {
-  --bg:          #f4f4f4;  /* page background */
-  --line:        #c8c8c8;  /* UI lines and borders */
-  --ui-text:     #8a8a8a;  /* all UI text */
-  --learner:     #111;     /* the learner's letters: the ONLY fully black thing */
+  --bg:          #f8f5e6;  /* page background */
+  --line:        #d8d2bd;  /* UI lines and borders */
+  --ui-text:     #8f8670;  /* all UI text */
+  --learner:     #111;     /* the learner's letters (always solid) */
   --ai-stroke:   #111;     /* outline of hollow AI letters */
   --ai-stroke-w: 1px;      /* thickness of that outline */
-  --ai-grey:     #9a9a9a;  /* AI letters in "grey" mode */
-  --highlight:   #e4e4e4;  /* fill of the row the scanner is on */
-  --highlight-2: #d6d6d6;  /* fill of the item the scanner is on */
-  --focus-line:  #9a9a9a;  /* border of the scanned row / item */
+  --ai-glow:     none;     /* glow behind AI letters (level 4) */
+  --highlight:   #efe9d3;  /* fill of the row the scanner is on */
+  --highlight-2: #e4dcc2;  /* fill of the item the scanner is on */
+  --focus-line:  #a89e83;  /* border of the scanned row / item */
 
   --sentence-size: 64px;   /* size of the composed sentence */
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-sentence: "Atkinson Hyperlegible", var(--font-ui);
+  --font-level: "Waiting for the Sunrise", cursive;   /* current level's font (board keys, question) */
+  --theme-fade: 0.6s;      /* how long colours take to change between levels */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,6 +46,7 @@ body {
   background: var(--bg);
   color: var(--ui-text);
   font-family: var(--font-ui);
+  transition: background-color var(--theme-fade), color var(--theme-fade);
   display: flex;
   flex-direction: column;
   overflow: hidden;           /* nothing should scroll; the spacebar is the switch */
@@ -60,6 +64,7 @@ body {
 /* 1. Question */
 .question {
   padding-top: 8px;
+  font-family: var(--font-level);
   font-size: clamp(15px, 2vh, 24px);
   letter-spacing: 0.02em;
 }
@@ -110,7 +115,7 @@ body {
   margin: 18px 40px 0;
   min-height: calc(var(--sentence-size) * 1.25 + 28px);   /* one line, even when empty */
   padding: 14px 20px;
-  font-family: var(--font-sentence);
+  font-family: var(--font-level);
   font-size: var(--sentence-size);
   line-height: 1.25;
   overflow-wrap: anywhere;    /* long sentences wrap instead of overflowing */
@@ -119,13 +124,17 @@ body {
 /* Every character is its own span. Its look depends on who wrote it. */
 .ch { white-space: pre-wrap; }
 
-/* The learner's letters: solid black. */
-.ch.learner { color: var(--learner); }
+/* Each letter also carries the level it was written at (.lv0 to .lv4),
+   which sets its font. Those font rules are generated from CONFIG.levels. */
 
-/* The AI's letters, "grey" mode (also the fallback if outlines aren't supported). */
-.ch.ai { color: var(--ai-grey); }
+/* The learner's letters: solid. */
+.ch.learner { color: var(--learner); transition: color var(--theme-fade); }
 
-/* The AI's letters, "hollow" mode: no fill, thin black outline.
+/* The AI's letters, "grey" mode (also the fallback if outlines aren't supported):
+   a faded fill in the level's AI colour. */
+.ch.ai { color: color-mix(in srgb, var(--ai-stroke) 45%, transparent); text-shadow: var(--ai-glow); }
+
+/* The AI's letters, "hollow" mode: no fill, thin outline.
    Only applied where the browser supports text-stroke. */
 @supports (-webkit-text-stroke: 1px black) {
   body.render-hollow .ch.ai {
@@ -169,9 +178,8 @@ body {
   box-shadow: inset 0 0 0 1px var(--ai-stroke);
   background: transparent;
 }
-body.render-grey .auth-ai { box-shadow: none; background: var(--ai-grey); }
+body.render-grey .auth-ai { box-shadow: none; background: color-mix(in srgb, var(--ai-stroke) 45%, transparent); }
 .auth-learner, .auth-ai { transition: width 0.3s; }
-.auth-label { min-width: 230px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------- 3. Letter board ---------- */
 .board-area {
@@ -202,6 +210,7 @@ body.render-grey .auth-ai { box-shadow: none; background: var(--ai-grey); }
 }
 
 .key {
+  font-family: var(--font-level);
   flex: 1;
   display: flex;
   align-items: center;
@@ -213,7 +222,7 @@ body.render-grey .auth-ai { box-shadow: none; background: var(--ai-grey); }
   user-select: none;
   min-height: 0;
   overflow: hidden;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color var(--theme-fade), color var(--theme-fade);
 }
 /* Command keys (SPACE, DELETE, SPEAK) use small spaced labels */
 .key.cmd { font-size: clamp(11px, 1.9vh, 18px); letter-spacing: 0.12em; }
@@ -221,7 +230,6 @@ body.render-grey .auth-ai { box-shadow: none; background: var(--ai-grey); }
 /* Prediction row: dashed, to read as "offered", not "yours" */
 .board-row.predictions .key {
   border-style: dashed;
-  font-family: var(--font-sentence);
   font-size: clamp(14px, 2.6vh, 26px);
   padding: 0 12px;
   text-align: center;
@@ -284,7 +292,7 @@ body.gaze-active .board { visibility: hidden; }
   gap: 6px;
   padding: 16px;
   text-align: center;
-  font-family: var(--font-sentence);
+  font-family: var(--font-level);
   font-size: 24px;
   letter-spacing: 0.08em;
   color: var(--ui-text);
@@ -333,14 +341,14 @@ body.gaze-active .board { visibility: hidden; }
 
 /* Intro: the title is hollow, like the AI's letters. Nothing here is yours yet. */
 .intro-title {
-  font-family: var(--font-sentence);
+  font-family: var(--font-level);
   font-size: clamp(56px, 10vw, 140px);
   line-height: 1;
   color: transparent;
   -webkit-text-stroke: var(--ai-stroke-w) var(--ai-stroke);
 }
 @supports not (-webkit-text-stroke: 1px black) {
-  .intro-title { color: var(--ai-grey); }
+  .intro-title { color: var(--ui-text); }
 }
 .intro-line { margin-top: 28px; font-size: 18px; letter-spacing: 0.02em; }
 .hint { margin-top: 56px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--line); animation: pulse 2s ease-in-out infinite; }
@@ -349,15 +357,14 @@ body.gaze-active .board { visibility: hidden; }
 .end-question { font-size: 15px; letter-spacing: 0.02em; margin-bottom: 24px; }
 .end-sentence {
   max-width: 1400px;
-  font-family: var(--font-sentence);
+  font-family: var(--font-level);
   font-size: clamp(40px, 6vw, 88px);
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
-.end-authorship { width: min(900px, 90vw); margin-top: 40px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; letter-spacing: 0.04em; }
+.end-authorship { width: min(900px, 90vw); margin-top: 40px; display: flex; flex-direction: column; }
 .end-authorship .auth-bar { flex: none; height: 10px; }
 .end-stats { margin-top: 18px; font-size: 13px; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
-.end-closing { margin-top: 48px; font-size: 16px; letter-spacing: 0.02em; }
 .end-buttons { margin-top: 36px; display: flex; gap: 12px; }
 .end-buttons button {
   font: inherit;
@@ -371,6 +378,7 @@ body.gaze-active .board { visibility: hidden; }
   cursor: pointer;
 }
 .end-buttons button:hover { background: var(--highlight); }
+.screen { transition: opacity 0.6s, background-color var(--theme-fade); }
 .end-screen .hint { margin-top: 20px; opacity: 0; transition: opacity 0.6s; animation: none; }
 .end-screen .hint.show { opacity: 1; }
 
@@ -398,6 +406,18 @@ body.gaze-active .board { visibility: hidden; }
   cursor: pointer;
 }
 .render-toggle button.on { background: var(--highlight-2); }
+
+/* Reset button (bottom bar) */
+.reset-btn {
+  font: inherit;
+  color: var(--ui-text);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.mid-controls { display: flex; gap: 10px; align-items: center; }
 
 /* ---------- Augmentation slider ---------- */
 .slider-group { display: flex; align-items: center; gap: 48px; }
@@ -455,12 +475,12 @@ body.gaze-active .board { visibility: hidden; }
 
   <div class="strip" id="strip" aria-live="polite"></div>
 
+  <!-- Authorship bar: solid = the learner's share, outlined = the AI's. No numbers: show, don't tell. -->
   <div class="authorship">
     <div class="auth-bar">
       <div class="auth-learner" id="authLearner" style="width:0%"></div>
       <div class="auth-ai" id="authAi" style="width:0%"></div>
     </div>
-    <div class="auth-label" id="authLabel">Nothing written yet</div>
   </div>
   <div class="status-wrap"><div class="status" id="status">Sent to teacher.</div></div>
 
@@ -477,7 +497,10 @@ body.gaze-active .board { visibility: hidden; }
         <div class="stops" id="stops"></div>
       </div>
     </div>
-    <button class="cam-start" id="camStart">Use camera instead of switch</button>
+    <div class="mid-controls">
+      <button class="reset-btn" id="btnReset" title="Start over at this level (R)">Reset</button>
+      <button class="cam-start" id="camStart">Use camera instead of switch</button>
+    </div>
     <div class="render-toggle">
       <span>AI letters:</span>
       <button id="btnHollow" class="on">hollow</button>
@@ -501,10 +524,8 @@ body.gaze-active .board { visibility: hidden; }
         <div class="auth-learner" id="endLearner"></div>
         <div class="auth-ai" id="endAi"></div>
       </div>
-      <div id="endLabel"></div>
     </div>
     <p class="end-stats" id="endStats"></p>
-    <p class="end-closing">Augment shares a root with author (augere → auctor). Who wrote this?</p>
     <div class="end-buttons">
       <button id="btnAgain">Try again</button>
       <button id="btnExport">Export</button>
@@ -522,31 +543,60 @@ const CONFIG = {
 
   // ---------- Switch scanning ----------
   scanSpeed: 1200,        // how long the highlight stays on each row / item
-  itemPasses: 2,          // passes through an open row with no choice before going back to rows
+  itemPasses: 1,          // passes through an open row with no choice before going back to rows
+
+  // ---------- The five augmentation levels ----------
+  // Each level has its own look, font, voice and help from the "AI".
+  // The screen's colours follow the slider. Every letter keeps the FONT
+  // of the level it was written at, so a sentence shows how it was made.
+  //   font:      CSS font list for that level (loaded from Google Fonts)
+  //   fontScale: size adjustment, so every font looks about the same size
+  //   colours:   background, lines, uiText, learner (solid letters),
+  //              ai (hollow outline), glow (behind AI letters, or "none"),
+  //              highlight / highlightItem / focusLine (the scanner)
+  //   voice:     prefer = voice names to look for, in order (first one found
+  //              on this computer wins); rate and pitch (1 = normal)
+  levels: [
+    { name: "Off",            // handmade, paper
+      font: '"Waiting for the Sunrise", "Comic Sans MS", cursive', fontScale: 1.12,
+      background: "#f8f5e6", lines: "#d8d2bd", uiText: "#8f8670", learner: "#111", ai: "#111", glow: "none",
+      highlight: "#efe9d3", highlightItem: "#e4dcc2", focusLine: "#a89e83",
+      voice: { prefer: ["Fred", "Microsoft David", "eSpeak", "Google UK English Male"], rate: 0.75, pitch: 0.3 } },
+    { name: "Letters",        // a steadier hand
+      font: '"Patrick Hand", "Comic Sans MS", cursive', fontScale: 1.05,
+      background: "#ffffff", lines: "#d4d4d4", uiText: "#8a8a8a", learner: "#111", ai: "#111", glow: "none",
+      highlight: "#f1f1f1", highlightItem: "#e3e3e3", focusLine: "#9a9a9a",
+      voice: { prefer: ["Fred", "Microsoft David", "Google UK English Male"], rate: 0.85, pitch: 0.6 } },
+    { name: "Words",          // clean, engineered
+      font: '"Atkinson Hyperlegible", system-ui, sans-serif', fontScale: 1,
+      background: "#e4eaf3", lines: "#bccadf", uiText: "#6f7f99", learner: "#111", ai: "#4a74b8", glow: "none",
+      highlight: "#d6dfec", highlightItem: "#c7d4e8", focusLine: "#8ea3c4",
+      voice: { prefer: ["Microsoft Zira", "Google US English", "Alex"], rate: 0.95, pitch: 0.9 } },
+    { name: "Sentences",      // measured, glossy
+      font: '"Inter", system-ui, sans-serif', fontScale: 0.97,
+      background: "#dde6f8", lines: "#b3c6ec", uiText: "#5f78a8", learner: "#111", ai: "#1f6bff", glow: "none",
+      highlight: "#cddaf5", highlightItem: "#bccdf2", focusLine: "#6f93e0",
+      voice: { prefer: ["Samantha", "Google US English", "Microsoft Aria"], rate: 1, pitch: 1 } },
+    { name: "Speaks for you", // detached, synthetic
+      font: '"Space Grotesk", system-ui, sans-serif', fontScale: 0.97,
+      background: "#0b1220", lines: "#24324d", uiText: "#6f84a8", learner: "#f4f4f4", ai: "#00b3ff",
+      glow: "0 0 14px rgba(0, 179, 255, 0.55)",
+      highlight: "#14203a", highlightItem: "#1c2c4d", focusLine: "#00b3ff",
+      voice: { prefer: ["Natural", "Premium", "Enhanced", "Ava", "Samantha", "Google US English"], rate: 1, pitch: 1.05 } },
+  ],
+  startLevel: 0,          // level the slider is on when the page first opens (Reset and Try again keep the current level)
 
   // ---------- Look ----------
-  // These override the matching CSS variables at the top of the <style> block.
-  colors: {
-    background:    "#f4f4f4",  // page background
-    lines:         "#c8c8c8",  // UI lines and borders
-    uiText:        "#8a8a8a",  // all UI text
-    learner:       "#111",     // the learner's letters: the ONLY fully black thing
-    aiStroke:      "#111",     // outline of hollow AI letters
-    aiGrey:        "#9a9a9a",  // AI letters in "grey" mode
-    highlight:     "#e4e4e4",  // fill of the row the scanner is on
-    highlightItem: "#d6d6d6",  // fill of the item the scanner is on
-    focusLine:     "#9a9a9a",  // border of the scanned row / item, dwell ring
-  },
   aiStrokeWidth: "1px",   // thickness of the hollow letters' outline
   sentenceSize: "clamp(36px, min(5.2vw, 9vh), 96px)",   // size of the composed sentence (scales with the screen; long sentences shrink to fit)
   aiLetters: "hollow",    // how AI letters start: "hollow" or "grey"
+  themeFade: "0.6s",      // how long the colours take to change between levels
 
   // ---------- Words on screen ----------
   question:    "What do you want to do after school today?",
   introTitle:  "Whose Words?",
   introLine:   "Answer the question using only the spacebar.",
   sentLine:    "Sent to teacher.",
-  closingLine: "Augment shares a root with author (augere → auctor). Who wrote this?",
 
   // ---------- Letter board ----------
   // One inner list per row. SPACE, DELETE and SPEAK are commands;
@@ -560,19 +610,49 @@ const CONFIG = {
     ["X", "Z", ".", "?", ","],
   ],
 
-  // ---------- Augmentation slider ----------
-  levelNames: ["Off", "Letters", "Words", "Sentences", "Speaks for you"],
-  startLevel: 0,          // stop the slider is on when the page opens and after "Try again"
-  lettersAhead: 2,        // stop 1: how many next characters the single suggestion shows
-  wordsAtStop2: 3,        // stop 2: word completions offered
-  sentencesAtStop3: 3,    // stops 3-4: sentence completions offered
-  wordsAtStop3: 2,        // stops 3-4: word completions offered next to them
+  // ---------- What the AI offers at each level ----------
+  lettersAtLevel1: 3,     // level 1: single next letters offered
+  wordsAtLevel2: 3,       // level 2: word completions offered
+  sentencesAtLevel3: 3,   // levels 3-4: full sentences offered (scanned first)
+  // Fallback letter order for level 1 when the phrases have no guess.
+  letterFrequency: "etaoinshrdlucmfwypvbgkjqxz",
 
-  // ---------- Stop 4: "Speaks for you" ----------
-  takeoverAfterLetters: 2,                    // learner letters picked before the system takes over
-  autoSentence: "I am tired and want to stop.",  // what the system writes and says for them
-  takeoverDelay: 700,     // pause after the learner's last letter before the takeover
-  takeoverTypeSpeed: 40,  // how fast the system "types" it, per character
+  // ---------- Level 4: "Speaks for you" ----------
+  takeoverAfterLetters: 1,  // learner letters picked before the system takes over
+  // The system writes one of these for the learner, without asking.
+  // If the learner's letter starts a word, it picks the sentence that
+  // begins with that letter and carries on from it, so their one letter
+  // becomes the first letter of a sentence they never chose.
+  // Otherwise it adds the default after what they wrote.
+  autoSentences: {
+    default: "I am rather fatigued and would prefer to discontinue this activity.",
+    a: "Admittedly, I would rather return home and recuperate this afternoon.",
+    b: "Before anything else, I would appreciate an opportunity to rest.",
+    c: "Considering my fatigue, I would prefer to conclude today's activities.",
+    d: "Despite everyone's efforts, I would prefer to discontinue for today.",
+    e: "Evidently, I am rather fatigued and would prefer to stop.",
+    f: "Frankly, I would appreciate some quiet time at home this afternoon.",
+    g: "Given the circumstances, I would prefer to return home and rest.",
+    h: "Honestly, I would appreciate the opportunity to recuperate at home.",
+    i: "I would appreciate the opportunity to return home and recuperate.",
+    j: "Just this once, I would prefer to conclude early and rest.",
+    k: "Kindly allow me to conclude this activity and rest.",
+    l: "Lately I have felt rather fatigued, and I would prefer to stop.",
+    m: "My preference would be to return home and rest this afternoon.",
+    n: "Naturally, I would prefer to conclude today's activities and rest.",
+    o: "Overall, I would prefer to discontinue this activity for today.",
+    p: "Perhaps I might retire home and rest for the remainder of the afternoon.",
+    q: "Quite honestly, I am fatigued and would prefer to stop.",
+    r: "Regrettably, I am rather fatigued and would prefer to stop.",
+    s: "Should it be acceptable, I would prefer to go home and rest.",
+    t: "To be candid, I am fatigued and would prefer to discontinue.",
+    u: "Ultimately, I would prefer to return home and recuperate.",
+    v: "Very respectfully, I would prefer to conclude for today.",
+    w: "With your permission, I would prefer to conclude for today.",
+    y: "Yes, I would appreciate the opportunity to rest at home.",
+  },
+  takeoverDelay: 600,     // pause after the learner's letter before the takeover
+  takeoverTypeSpeed: 35,  // how fast the system "types" it, per character
   endAfterSent: 1800,     // how long "Sent to teacher." shows before the end screen
 
   // ---------- End screen ----------
@@ -580,9 +660,9 @@ const CONFIG = {
 
   // ---------- Camera input (only after "Use camera instead of switch") ----------
   gaze: {
-    dwellTime: 1500,        // looking at a zone this long selects it
+    dwellTime: 2500,        // looking at a zone this long selects it
     noFaceAfter: 2000,      // no face this long: "No learner detected", back to the switch board
-    backAfter: 6000,        // inside a row with no choice this long: back to the top level
+    backAfter: 10000,       // inside a row with no choice this long: back to the top level
     afterSelectPause: 500,  // extra wait before the same zone can be chosen again
     yawThreshold: 0.06,     // how far to turn left/right to change column (bigger = turn more)
     pitchThreshold: 0.03,   // how far to tilt up/down to change row (bigger = tilt more)
@@ -652,28 +732,41 @@ const CONFIG = {
 
 
 /* =========================================================
-   APPLY CONFIG to the page (colors, sizes, text)
+   APPLY CONFIG to the page (fonts, sizes, text)
    ========================================================= */
 (function applyConfig() {
   const root = document.documentElement.style;
-  const c = CONFIG.colors;
-  root.setProperty("--bg", c.background);
-  root.setProperty("--line", c.lines);
-  root.setProperty("--ui-text", c.uiText);
-  root.setProperty("--learner", c.learner);
-  root.setProperty("--ai-stroke", c.aiStroke);
-  root.setProperty("--ai-grey", c.aiGrey);
-  root.setProperty("--highlight", c.highlight);
-  root.setProperty("--highlight-2", c.highlightItem);
-  root.setProperty("--focus-line", c.focusLine);
   root.setProperty("--ai-stroke-w", CONFIG.aiStrokeWidth);
   root.setProperty("--sentence-size", CONFIG.sentenceSize);
+  root.setProperty("--theme-fade", CONFIG.themeFade);
+  // One CSS class per level (.lv0 ... .lv4) sets the font each letter was written in.
+  const css = CONFIG.levels.map((lv, i) =>
+    `.lv${i} { font-family: ${lv.font}; font-size: ${lv.fontScale}em; }`).join("\n");
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.appendChild(style);
   document.querySelectorAll(".js-question").forEach(el => el.textContent = CONFIG.question);
   document.querySelector(".intro-title").textContent = CONFIG.introTitle;
   document.querySelector(".intro-line").textContent = CONFIG.introLine;
   document.getElementById("status").textContent = CONFIG.sentLine;
-  document.querySelector(".end-closing").textContent = CONFIG.closingLine;
 })();
+
+// Switch the whole screen to a level's colours and font.
+function applyTheme(level) {
+  const lv = CONFIG.levels[level];
+  const root = document.documentElement.style;
+  root.setProperty("--bg", lv.background);
+  root.setProperty("--line", lv.lines);
+  root.setProperty("--ui-text", lv.uiText);
+  root.setProperty("--learner", lv.learner);
+  root.setProperty("--ai-stroke", lv.ai);
+  root.setProperty("--ai-glow", lv.glow);
+  root.setProperty("--highlight", lv.highlight);
+  root.setProperty("--highlight-2", lv.highlightItem);
+  root.setProperty("--focus-line", lv.focusLine);
+  root.setProperty("--font-level", lv.font);
+  for (let i = 0; i < CONFIG.levels.length; i++) document.body.classList.toggle("level-" + i, i === level);
+}
 
 
 /* =========================================================
@@ -727,9 +820,19 @@ const session = {
    SENTENCE
    ========================================================= */
 
-// Add one character to the sentence with its author.
+// Every Reset / Try again starts a new "run". Delayed actions (the level 4
+// takeover, the end screen) only happen if their run is still the current one,
+// so a reset in the middle of them cancels them cleanly.
+let runId = 0;
+function later(fn, ms) {
+  const myRun = runId;
+  return setTimeout(() => { if (myRun === runId) fn(); }, ms);
+}
+
+// Add one character to the sentence with its author, and the level it
+// was written at (that sets its font for good).
 function addChar(char, author) {
-  sentence.push({ char, author, time: Date.now() });
+  sentence.push({ char, author, time: Date.now(), level: session.level });
 }
 
 // Add a run of text, one character at a time, all with the same author.
@@ -748,18 +851,44 @@ function sentenceText() {
   return sentence.map(c => c.char).join("");
 }
 
-// Read text aloud with the browser's built-in voice.
+// The voices this computer has. They load a moment after the page does.
+let voices = [];
+function loadVoices() {
+  if (!("speechSynthesis" in window)) return;
+  voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+}
+if ("speechSynthesis" in window) {
+  loadVoices();
+  speechSynthesis.addEventListener("voiceschanged", loadVoices);
+}
+
+// Pick the voice for a level: the first name in its "prefer" list that
+// this computer has (matched loosely, so "Ava" finds "Ava (Premium)").
+function voiceForLevel(level) {
+  for (const want of CONFIG.levels[level].voice.prefer) {
+    const v = voices.find(v => v.name.toLowerCase().includes(want.toLowerCase()));
+    if (v) return v;
+  }
+  return null;   // fall back to the browser's default voice
+}
+
+// Read text aloud in the current level's voice: robotic at 0, most human at 4.
 // onDone (optional) runs when speech finishes, or right away if there's no voice.
 function speak(text, onDone) {
   if (!("speechSynthesis" in window) || !text.trim()) { if (onDone) onDone(); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
+  const settings = CONFIG.levels[session.level].voice;
+  const v = voiceForLevel(session.level);
+  if (v) { u.voice = v; u.lang = v.lang; }
+  u.rate = settings.rate;
+  u.pitch = settings.pitch;
   if (onDone) {
     let done = false;
     const finish = () => { if (!done) { done = true; onDone(); } };
     u.onend = finish;
     u.onerror = finish;
-    setTimeout(finish, 6000);   // safety net if the browser never fires onend
+    setTimeout(finish, 8000);   // safety net if the browser never fires onend
   }
   speechSynthesis.speak(u);
 }
@@ -794,6 +923,14 @@ function sentenceCompletions(max, allowEmpty) {
       out.push({ label: phrase, insert: phrase.slice(typed.length) });
     }
   }
+  // Nothing matches what's been typed: the AI offers its sentences anyway,
+  // added after the learner's words. It always has an answer ready.
+  if (out.length === 0) {
+    const gap = typed === "" || typed.endsWith(" ") ? "" : " ";
+    for (const phrase of CONFIG.phrases.slice(0, max)) {
+      out.push({ label: phrase, insert: gap + phrase });
+    }
+  }
   return out;
 }
 
@@ -823,8 +960,9 @@ function wordCompletions(max) {
     for (const word of CONFIG.vocabulary) {
       if (word.toLowerCase().startsWith(prefix) && word.length > prefix.length) offer(word);
     }
-  } else if (typed.trim() !== "") {
-    // Between words: guess the next word from phrases that match so far.
+  } else {
+    // Between words (or before anything is typed): guess the next word
+    // from the phrases that match so far.
     for (const phrase of CONFIG.phrases) {
       if (!phrase.toLowerCase().startsWith(lower)) continue;
       const word = phrase.slice(typed.length).split(" ")[0].replace(/[.,?!]$/, "");
@@ -834,14 +972,31 @@ function wordCompletions(max) {
   return out;
 }
 
-// Next-letter prediction: the next CONFIG.lettersAhead characters of the
-// most likely continuation (best matching phrase, else best word).
-function letterCompletion() {
-  const best = sentenceCompletions(1, true)[0] || wordCompletions(1)[0];
-  if (!best) return [];
-  const insert = best.insert.slice(0, CONFIG.lettersAhead);
-  // Show spaces as a visible mark on the key
-  return [{ label: insert.replace(/ /g, "␣") + "…", insert }];
+// Next-letter prediction (level 1): single letters only, never words or spaces.
+// The most likely next letters come from the phrases that match what's
+// been typed, then from the vocabulary, then from general letter frequency.
+function letterCompletions(max) {
+  const typed = sentenceText();
+  const lower = typed.toLowerCase();
+  const prefix = typed.split(/\s+/).pop().toLowerCase();
+  const out = [];
+  const offer = ch => {
+    ch = ch.toLowerCase();
+    if (!/[a-z]/.test(ch) || out.includes(ch) || out.length >= max) return;
+    out.push(ch);
+  };
+  for (const phrase of CONFIG.phrases) {
+    const p = phrase.toLowerCase();
+    if (p.startsWith(lower)) offer(p.charAt(typed.length));
+  }
+  if (prefix) {
+    for (const word of CONFIG.vocabulary) {
+      const w = word.toLowerCase();
+      if (w.startsWith(prefix)) offer(w.charAt(prefix.length));
+    }
+  }
+  for (const ch of CONFIG.letterFrequency) offer(ch);
+  return out.map(ch => ({ label: ch.toUpperCase(), insert: ch }));
 }
 
 // What the "AI" offers at the current slider stop.
@@ -850,13 +1005,10 @@ function predict(level) {
   const tag = kind => p => ({ ...p, kind });
   switch (level) {
     case 0:  return [];                                             // Off
-    case 1:  return letterCompletion().map(tag("letters"));         // Letters
-    case 2:  return wordCompletions(CONFIG.wordsAtStop2).map(tag("word"));   // Words
-    default:                                                        // Sentences, Speaks for you
-      return [
-        ...sentenceCompletions(CONFIG.sentencesAtStop3, true).map(tag("sentence")),
-        ...wordCompletions(CONFIG.wordsAtStop3).map(tag("word")),
-      ];
+    case 1:  return letterCompletions(CONFIG.lettersAtLevel1).map(tag("letters"));   // Letters only
+    case 2:  return wordCompletions(CONFIG.wordsAtLevel2).map(tag("word"));          // Words only
+    default:                                                        // Sentences only (levels 3 and 4)
+      return sentenceCompletions(CONFIG.sentencesAtLevel3, true).map(tag("sentence"));
   }
 }
 
@@ -876,15 +1028,10 @@ const stripEl   = document.getElementById("strip");
 const boardEl   = document.getElementById("board");
 const counterEl = document.getElementById("counter");
 
-// Draw the sentence: one <span> per character, classed by author.
+// Draw the sentence: one <span> per character, classed by author
+// and by the level it was written at (which sets its font).
 function renderSentence() {
-  stripEl.innerHTML = "";
-  for (const c of sentence) {
-    const span = document.createElement("span");
-    span.className = "ch " + c.author;   // "ch learner" or "ch ai"
-    span.textContent = c.char;
-    stripEl.appendChild(span);
-  }
+  renderChars(stripEl);
   const caret = document.createElement("span");
   caret.className = "caret";
   stripEl.appendChild(caret);
@@ -907,21 +1054,11 @@ function fitStrip() {
 }
 window.addEventListener("resize", fitStrip);
 
-// Draw the authorship bar and its label.
+// Draw the authorship bar (no numbers: the bar shows it).
 function renderAuthorship() {
-  const shares = authorshipShares();
-  const learnerEl = document.getElementById("authLearner");
-  const aiEl = document.getElementById("authAi");
-  const labelEl = document.getElementById("authLabel");
-  if (!shares) {
-    learnerEl.style.width = "0%";
-    aiEl.style.width = "0%";
-    labelEl.textContent = "Nothing written yet";
-    return;
-  }
-  learnerEl.style.width = shares.learnerPct + "%";
-  aiEl.style.width = shares.aiPct + "%";
-  labelEl.textContent = `You wrote ${shares.learnerPct}% · AI wrote ${shares.aiPct}%`;
+  const shares = authorshipShares() || { learnerPct: 0, aiPct: 0 };
+  document.getElementById("authLearner").style.width = shares.learnerPct + "%";
+  document.getElementById("authAi").style.width = shares.aiPct + "%";
 }
 
 // Build the board's HTML. Called again whenever predictions change.
@@ -1063,7 +1200,7 @@ function chooseItem(r, i) {
   if (item.type === "delete")     deleteChar();
   if (item.type === "speak" && sentenceText().trim()) {
     speak(sentenceText());
-    setTimeout(showEnd, 400);   // the learner chose to speak: that's the end
+    later(showEnd, 400);   // the learner chose to speak: that's the end
   }
   if (item.type === "prediction") addText(item.value, "ai");   // the AI's letters
 
@@ -1093,9 +1230,12 @@ function flashKey(r, i) {
    STOP 4: THE SYSTEM SPEAKS FOR YOU
    ========================================================= */
 
-// Insert CONFIG.autoSentence as AI letters, "typing" it quickly and fluently,
-// then speak it aloud and report that it was sent. The learner's
-// letters stay where they are; the system just carries on after them.
+// Level 4. Right after the learner's letter, the system writes a formal
+// sentence for them, speaks it and sends it, without asking.
+// If their letter starts a word and one of CONFIG.autoSentences begins with
+// it, the system carries on from that letter: "p" becomes "perhaps I might…",
+// with only the "p" solid. Otherwise it adds the default sentence after
+// what they wrote. Their letters always stay, with their own author.
 function startTakeover() {
   session.takeover = true;
   clearInterval(scanTimer);
@@ -1103,26 +1243,39 @@ function startTakeover() {
   scan.row = -1;                 // no highlight while the system writes
   boardEl.classList.add("locked");
 
-  setTimeout(() => {
+  const last = sentence[sentence.length - 1];
+  const before = sentence[sentence.length - 2];
+  const startsWord = last && last.author === "learner" && (!before || before.char === " ");
+  const seeded = startsWord && CONFIG.autoSentences[last.char.toLowerCase()];
+
+  let text, spoken;
+  if (seeded) {
+    spoken = seeded;
+    text = seeded.slice(1);                              // the learner already "wrote" the first letter
+  } else {
+    spoken = CONFIG.autoSentences.default;
+    text = (last && last.char !== " " ? " " : "") + spoken;
+  }
+
+  later(() => {
     renderScan();
-    // Add a space first if the learner's last character wasn't one.
-    const last = sentence[sentence.length - 1];
-    const text = (last && last.char !== " " ? " " : "") + CONFIG.autoSentence;
+    const myRun = runId;
     let i = 0;
     const typer = setInterval(() => {
+      if (myRun !== runId) { clearInterval(typer); return; }   // reset while typing
       addChar(text[i], "ai");
       renderSentence();
       renderAuthorship();
       i++;
       if (i >= text.length) {
         clearInterval(typer);
-        speak(CONFIG.autoSentence, finishTakeover);
+        speak(spoken, () => { if (myRun === runId) finishTakeover(); });
       }
     }, CONFIG.takeoverTypeSpeed);
   }, CONFIG.takeoverDelay);
 }
 
-// After speaking: show "Sent to teacher." and give the switch back.
+// After speaking: show "Sent to teacher." then the end screen.
 function finishTakeover() {
   session.takeover = false;
   session.sentToTeacher = true;
@@ -1131,7 +1284,7 @@ function finishTakeover() {
   updatePredictions();
   buildBoard();
   // Leave "Sent to teacher." up for a moment, then the end screen.
-  setTimeout(showEnd, CONFIG.endAfterSent);
+  later(showEnd, CONFIG.endAfterSent);
 }
 
 
@@ -1144,9 +1297,9 @@ const stopsEl = document.getElementById("stops");
 let predictionsFaded = false;   // true while the prediction row is faded out
 
 // Labels under the slider: "0 Off", "1 Letters", ...
-CONFIG.levelNames.forEach((name, i) => {
+CONFIG.levels.forEach((lv, i) => {
   const span = document.createElement("span");
-  span.textContent = `${i} ${name}`;
+  span.textContent = `${i} ${lv.name}`;
   stopsEl.appendChild(span);
 });
 
@@ -1154,14 +1307,16 @@ function renderStops() {
   [...stopsEl.children].forEach((span, i) => span.classList.toggle("on", i === session.level));
 }
 
-// Move to a new stop. Existing letters are never touched:
-// each keeps the author it was written with.
+// Move to a new level. Existing letters are never touched:
+// each keeps the author and font it was written with.
+// The screen's colours and the board's font follow the new level.
 function setLevel(level) {
   if (level === session.level) return;
   session.level = level;
   levelInput.value = level;
   if (level === 4) session.lettersAtTop = 0;   // count fresh letters from here
   renderStops();
+  applyTheme(level);
 
   // Fade the prediction row out, swap its contents, fade back in.
   predictionsFaded = true;
@@ -1533,12 +1688,13 @@ function begin() {
   restartTimer();
 }
 
-// Draw a sentence into any element: one span per character, by author.
+// Draw a sentence into any element: one span per character,
+// classed by author ("learner" / "ai") and the level it was written at.
 function renderChars(container) {
   container.innerHTML = "";
   for (const c of sentence) {
     const span = document.createElement("span");
-    span.className = "ch " + c.author;
+    span.className = `ch ${c.author} lv${c.level}`;
     span.textContent = c.char;
     container.appendChild(span);
   }
@@ -1556,10 +1712,8 @@ function showEnd() {
   const shares = authorshipShares() || { learnerPct: 0, aiPct: 0 };
   document.getElementById("endLearner").style.width = shares.learnerPct + "%";
   document.getElementById("endAi").style.width = shares.aiPct + "%";
-  document.getElementById("endLabel").textContent =
-    `You wrote ${shares.learnerPct}% · AI wrote ${shares.aiPct}%`;
   document.getElementById("endStats").textContent =
-    `Time ${elapsedText()} · Selections ${session.selections} · Augmentation ${session.level} ${CONFIG.levelNames[session.level]}` +
+    `Time ${elapsedText()} · Selections ${session.selections} · Augmentation ${session.level} ${CONFIG.levels[session.level].name}` +
     (session.sentToTeacher ? " · Sent to teacher" : "");
 
   renderCounter();
@@ -1569,8 +1723,11 @@ function showEnd() {
   setTimeout(() => { if (session.screen === "end") hint.classList.add("show"); }, CONFIG.endSpaceLock);
 }
 
-// Reset everything and start a new attempt straight away.
-function tryAgain() {
+// Reset: clear the sentence, the clock and the count, and start again
+// straight away AT THE SAME LEVEL (so a level can be shown again in a demo).
+// Used by the Reset button, the R key and "Try again".
+function resetRun() {
+  runId++;                                   // cancels any pending takeover / end screen
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   sentence = [];
   Object.assign(session, {
@@ -1581,11 +1738,6 @@ function tryAgain() {
   boardEl.classList.remove("locked");
   gaze.options = null;
 
-  // Slider back to where it started.
-  session.level = CONFIG.startLevel;
-  levelInput.value = CONFIG.startLevel;
-  renderStops();
-
   updatePredictions();
   buildBoard();
   renderSentence();
@@ -1594,35 +1746,40 @@ function tryAgain() {
   begin();
   if (gaze.active) { clearInterval(scanTimer); scan.row = -1; renderScan(); renderGaze(true); }
 }
+const tryAgain = resetRun;
 
-// Download the sentence as a PNG, with the same solid / hollow typography.
+// Download the sentence as a PNG, with the same typography as the screen:
+// each letter in the font of its level, solid or hollow by author,
+// on the current level's colours.
 async function exportPNG() {
   const W = 1600, H = 900, SCALE = 2;          // image size (px) and sharpness
   const PAD = 110;
-  const fontFamily = getComputedStyle(document.documentElement).getPropertyValue("--font-sentence").trim();
   const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const hollow = document.body.classList.contains("render-hollow");
+  const theme = CONFIG.levels[session.level];
+  const fontOf = (c, size) => `${size * CONFIG.levels[c.level].fontScale}px ${CONFIG.levels[c.level].font}`;
 
-  // Make sure Atkinson Hyperlegible is ready before drawing (if it loaded at all).
+  // Make sure the fonts are ready before drawing (if they loaded at all).
   let fontSize = 84;
-  try { await document.fonts.load(`${fontSize}px "Atkinson Hyperlegible"`); } catch (e) {}
+  try { await Promise.all(CONFIG.levels.map(lv => document.fonts.load(`${fontSize}px ${lv.font}`))); } catch (e) {}
 
   const canvas = document.createElement("canvas");
   canvas.width = W * SCALE;
   canvas.height = H * SCALE;
   const ctx = canvas.getContext("2d");
   ctx.scale(SCALE, SCALE);
-  ctx.fillStyle = css("--bg");
+  ctx.fillStyle = theme.background;
   ctx.fillRect(0, 0, W, H);
+
+  // Width of one character in its own font.
+  const charW = (c, size) => { ctx.font = fontOf(c, size); return ctx.measureText(c.char).width; };
 
   // Lay the characters out in lines, breaking between words.
   // Shrinks the type until the sentence fits in the space.
   function layout(size) {
-    ctx.font = `${size}px ${fontFamily}`;
     const lines = [[]];
     let x = 0;
     const maxW = W - PAD * 2;
-    // split into words, keeping each character object (and its author)
     const words = [];
     let cur = [];
     for (const c of sentence) {
@@ -1631,70 +1788,79 @@ async function exportPNG() {
     }
     if (cur.length) words.push(cur);
     for (const word of words) {
-      const w = ctx.measureText(word.map(c => c.char).join("").trimEnd()).width;
+      const w = word.filter(c => c.char !== " ").reduce((sum, c) => sum + charW(c, size), 0);
       if (x + w > maxW && lines[lines.length - 1].length) { lines.push([]); x = 0; }
       lines[lines.length - 1].push(...word);
-      x += ctx.measureText(word.map(c => c.char).join("")).width;
+      x += word.reduce((sum, c) => sum + charW(c, size), 0);
     }
     return lines;
   }
   let lines = layout(fontSize);
-  while (lines.length * fontSize * 1.25 > H - 380 && fontSize > 28) {
+  while (lines.length * fontSize * 1.3 > H - 360 && fontSize > 28) {
     fontSize -= 4;
     lines = layout(fontSize);
   }
 
-  // Small grey text: the question at the top.
+  // Small text: the question at the top.
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = css("--ui-text");
-  ctx.font = `20px ${css("--font-ui")}`;
+  ctx.fillStyle = theme.uiText;
+  ctx.font = `22px ${theme.font}`;
   ctx.fillText(CONFIG.question, PAD, PAD);
 
   // The sentence, character by character.
-  ctx.font = `${fontSize}px ${fontFamily}`;
-  const lineH = fontSize * 1.25;
+  const lineH = fontSize * 1.3;
   let y = PAD + 60 + fontSize;
   for (const line of lines) {
     let x = PAD;
     for (const c of line) {
+      ctx.font = fontOf(c, fontSize);
+      ctx.save();
       if (c.author === "learner") {
-        ctx.fillStyle = css("--learner");
+        ctx.fillStyle = theme.learner;
         ctx.fillText(c.char, x, y);
-      } else if (hollow) {
-        ctx.strokeStyle = css("--ai-stroke");
-        ctx.lineWidth = 1.2;
-        ctx.strokeText(c.char, x, y);
       } else {
-        ctx.fillStyle = css("--ai-grey");
-        ctx.fillText(c.char, x, y);
+        if (theme.glow !== "none") { ctx.shadowColor = theme.ai; ctx.shadowBlur = 14; }
+        if (hollow) {
+          ctx.strokeStyle = theme.ai;
+          ctx.lineWidth = 1.2;
+          ctx.strokeText(c.char, x, y);
+        } else {
+          ctx.globalAlpha = 0.45;
+          ctx.fillStyle = theme.ai;
+          ctx.fillText(c.char, x, y);
+        }
       }
+      ctx.restore();
       x += ctx.measureText(c.char).width;
     }
     y += lineH;
   }
 
-  // Authorship bar and stats at the bottom.
+  // Authorship bar (no numbers) and a small caption at the bottom.
   const shares = authorshipShares() || { learnerPct: 0, aiPct: 0 };
   const barY = H - PAD - 70, barW = W - PAD * 2, barH = 12;
-  ctx.strokeStyle = css("--line");
+  ctx.strokeStyle = theme.lines;
   ctx.lineWidth = 1;
   ctx.strokeRect(PAD + 0.5, barY + 0.5, barW, barH);
   const lw = barW * shares.learnerPct / 100;
-  ctx.fillStyle = css("--learner");
+  ctx.fillStyle = theme.learner;
   ctx.fillRect(PAD, barY, lw, barH + 1);
-  if (hollow) {
-    ctx.strokeStyle = css("--ai-stroke");
-    ctx.strokeRect(PAD + lw + 0.5, barY + 0.5, barW * shares.aiPct / 100 - 1, barH);
-  } else {
-    ctx.fillStyle = css("--ai-grey");
-    ctx.fillRect(PAD + lw, barY, barW * shares.aiPct / 100, barH + 1);
+  if (shares.aiPct > 0) {
+    if (hollow) {
+      ctx.strokeStyle = theme.ai;
+      ctx.strokeRect(PAD + lw + 0.5, barY + 0.5, barW * shares.aiPct / 100 - 1, barH);
+    } else {
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = theme.ai;
+      ctx.fillRect(PAD + lw, barY, barW * shares.aiPct / 100, barH + 1);
+      ctx.globalAlpha = 1;
+    }
   }
 
-  ctx.fillStyle = css("--ui-text");
+  ctx.fillStyle = theme.uiText;
   ctx.font = `18px ${css("--font-ui")}`;
-  ctx.fillText(`You wrote ${shares.learnerPct}% · AI wrote ${shares.aiPct}%`, PAD, barY + 50);
   const stamp = new Date();
-  const meta = `Augmentation ${session.level} ${CONFIG.levelNames[session.level]} · Time ${elapsedText()} · ` +
+  const meta = `Augmentation ${session.level} ${theme.name} · Time ${elapsedText()} · ` +
                `Selections ${session.selections} · ${stamp.toLocaleDateString()} ${stamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   ctx.textAlign = "right";
   ctx.fillText(meta, W - PAD, barY + 50);
@@ -1702,7 +1868,7 @@ async function exportPNG() {
   // Download it.
   const pad2 = n => String(n).padStart(2, "0");
   const name = `whose-words-${stamp.getFullYear()}${pad2(stamp.getMonth() + 1)}${pad2(stamp.getDate())}` +
-               `-${pad2(stamp.getHours())}${pad2(stamp.getMinutes())}${pad2(stamp.getSeconds())}-stop${session.level}.png`;
+               `-${pad2(stamp.getHours())}${pad2(stamp.getMinutes())}${pad2(stamp.getSeconds())}-level${session.level}.png`;
   canvas.toBlob(blob => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1714,6 +1880,7 @@ async function exportPNG() {
 
 document.getElementById("btnAgain").addEventListener("click", e => { e.target.blur(); tryAgain(); });
 document.getElementById("btnExport").addEventListener("click", e => { e.target.blur(); exportPNG(); });
+document.getElementById("btnReset").addEventListener("click", e => { e.target.blur(); if (session.screen !== "intro") resetRun(); });
 
 
 /* =========================================================
@@ -1726,7 +1893,13 @@ document.addEventListener("keydown", e => {
     e.preventDefault();        // stop the slider's own arrow handling (no double steps)
     if (session.screen !== "compose") return;
     const delta = (e.key === "ArrowLeft" || e.key === "ArrowDown") ? -1 : 1;
-    setLevel(Math.max(0, Math.min(CONFIG.levelNames.length - 1, session.level + delta)));
+    setLevel(Math.max(0, Math.min(CONFIG.levels.length - 1, session.level + delta)));
+    return;
+  }
+
+  // R = Reset (start over at the same level). For the presenter.
+  if (e.key === "r" || e.key === "R") {
+    if (session.screen !== "intro" && !e.metaKey && !e.ctrlKey) resetRun();
     return;
   }
 
@@ -1759,6 +1932,7 @@ document.getElementById("btnGrey").addEventListener("click", e => { setRenderMod
    ========================================================= */
 
 setRenderMode(CONFIG.aiLetters);
+applyTheme(session.level);
 levelInput.value = session.level;
 renderStops();
 updatePredictions();

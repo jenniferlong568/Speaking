@@ -1,10 +1,11 @@
 # Whose Words?
 
-An interactive piece about the verb *augment*. The viewer answers one question with a single switch (the spacebar). A scripted "AI" offers to finish their words and sentences. Every letter remembers who wrote it: the learner's letters are solid black, and the AI's letters are hollow or grey.
+An interactive piece about the verb *augment*. The viewer answers one question with a single switch (the spacebar). A scripted "AI" offers to finish their words and sentences. Every letter remembers who wrote it: the learner's letters are solid, and the AI's letters are hollow outlines. As augmentation rises, the screen moves from handwritten paper to a glowing machine, and the voice from robotic to human.
 
 ## How to run it
 
-- **Easiest:** double-click `index.html`. It opens in your browser and works offline (it falls back to a system font if Atkinson Hyperlegible can't load).
+- **Easiest:** double-click `index.html`. It opens in your browser and works offline (it falls back to system fonts if the web fonts can't load).
+- **Online:** https://jenniferlong568.github.io/Speaking/ (once GitHub Pages is switched on).
 - **If the camera won't start** (some browsers block cameras on files opened directly): in Terminal, `cd` into this folder, run `python3 -m http.server`, then open http://localhost:8000.
 - Chrome is the most reliable for the voice and the camera. For a presentation, press F11 (Windows) or Ctrl+Cmd+F (Mac) to go full screen.
 
@@ -14,11 +15,24 @@ An interactive piece about the verb *augment*. The viewer answers one question w
 |---|---|
 | Space | The switch. On the intro: begin. While writing: open the highlighted row, then choose the highlighted key. On the end screen: try again (after 2.5 s). |
 | ← ↓ / → ↑ | Move the Augmentation slider down / up (the mouse works too). |
-| Mouse | The hollow/grey toggle, the camera button, and Try again / Export on the end screen. |
+| R | Reset: start over at the same level (same as the Reset button). |
+| Mouse | Reset, the hollow/grey toggle, the camera button, and Try again / Export on the end screen. |
 
 ## The flow
 
-Intro → write an answer → **SPEAK** (or stop 4 speaks for you) → end screen with the sentence, the authorship bar, time and selections → **Export** saves a PNG → **Try again** resets.
+Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end screen with the sentence, the authorship bar, time and selections → **Export** saves a PNG → **Try again** or **Reset** starts over at the same level.
+
+## The five levels
+
+| Level | Look and font | What the AI offers | Voice |
+|---|---|---|---|
+| 0 Off | cream paper, Waiting for the Sunrise | nothing | flat, slow, robotic |
+| 1 Letters | white, Patrick Hand | 3 next letters | a little smoother |
+| 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | clear |
+| 3 Sentences | light blue, Inter | 3 full sentences, scanned first | natural |
+| 4 Speaks for you | dark navy, Space Grotesk, glowing blue | after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer |
+
+The learner's letters are always solid, and the AI's are always hollow outlines (or faded, in "grey" mode). The screen's colours follow the slider, but **every letter keeps the font of the level it was written at**, so a sentence shows how it was made. The authorship bar under the sentence shows the learner's share (solid) against the AI's (outlined), with no numbers.
 
 ## CONFIG
 
@@ -26,34 +40,39 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 **Switch scanning**
 - `scanSpeed`: how long (ms) the highlight stays on each row or key. Higher is slower and easier.
-- `itemPasses`: how many times the highlight goes across an open row before giving up and going back to rows.
+- `itemPasses`: how many times the highlight goes across an open row before going back to rows (1 = one pass, so a wrong row costs little).
+
+**Levels** (`levels`, one entry per level, 0 to 4)
+- `name`: the label under the slider.
+- `font`, `fontScale`: the font letters are written in at that level, and a size tweak so all the fonts look about the same size.
+- `background`, `lines`, `uiText`: the page, borders and UI text at that level.
+- `learner`: colour of the learner's solid letters (off-white at level 4 so they show on navy).
+- `ai`, `glow`: colour of the AI's hollow letters, and an optional glow behind them (`"none"` for no glow).
+- `highlight`, `highlightItem`, `focusLine`: the scanning highlight and the dwell ring.
+- `voice.prefer`: voice names to look for, in order. The first one this computer has is used, matched loosely ("Ava" finds "Ava (Premium)").
+- `voice.rate`, `voice.pitch`: speed and pitch (1 = normal). Low pitch and rate sound more robotic.
+- `startLevel`: the level when the page first opens.
 
 **Look**
-- `colors.background`, `colors.lines`, `colors.uiText`: page, borders, UI text.
-- `colors.learner`: the learner's letters. Keep it the only fully black thing.
-- `colors.aiStroke`, `aiStrokeWidth`: the outline of hollow AI letters.
-- `colors.aiGrey`: AI letters in grey mode.
-- `colors.highlight`, `colors.highlightItem`, `colors.focusLine`: the scanning highlight and the dwell ring.
+- `aiStrokeWidth`: thickness of the hollow letters' outline.
 - `sentenceSize`: size of the sentence being written. It scales with the screen, and very long sentences shrink to fit.
 - `aiLetters`: whether AI letters start `"hollow"` or `"grey"`.
+- `themeFade`: how long the colours take to change between levels.
 
 **Words on screen**
-- `question`, `introTitle`, `introLine`, `sentLine` ("Sent to teacher."), `closingLine`: change any text here and it updates everywhere, including the PNG export.
+- `question`, `introTitle`, `introLine`, `sentLine` ("Sent to teacher."): change any text here and it updates everywhere, including the PNG export.
 
 **Letter board**
 - `boardLayout`: one list per row. `SPACE`, `DELETE` and `SPEAK` are commands; anything else is typed as itself. The prediction row is added above automatically.
 
-**Augmentation slider**
-- `levelNames`: labels for stops 0 to 4.
-- `startLevel`: where the slider starts when the page opens and after Try again.
-- `lettersAhead`: stop 1, how many next characters the single suggestion offers.
-- `wordsAtStop2`: stop 2, how many word completions.
-- `sentencesAtStop3`, `wordsAtStop3`: stops 3 and 4, how many sentences and words.
+**What the AI offers**
+- `lettersAtLevel1`, `wordsAtLevel2`, `sentencesAtLevel3`: how many suggestions each level shows.
+- `letterFrequency`: the letter order level 1 falls back on when the phrases have no guess.
 
-**Stop 4: "Speaks for you"**
-- `takeoverAfterLetters`: how many letters the learner picks before the system takes over.
-- `autoSentence`: the sentence the system writes and says for them.
-- `takeoverDelay`: pause after the learner's last letter before the takeover.
+**Level 4: "Speaks for you"**
+- `takeoverAfterLetters`: how many letters the learner picks before the system takes over (1).
+- `autoSentences`: the formal sentences the system writes for them. If the learner's letter starts a word, the sentence beginning with that letter is used and continues from it ("p" becomes "perhaps I might…"). Otherwise `default` is added after what they wrote.
+- `takeoverDelay`: pause after the learner's letter before the takeover.
 - `takeoverTypeSpeed`: how fast (ms per character) the system types it.
 - `endAfterSent`: how long "Sent to teacher." shows before the end screen.
 
@@ -61,9 +80,9 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `endSpaceLock`: how long the spacebar is ignored, so a stray press can't wipe the result while people read it.
 
 **Camera input** (`gaze`, only used after "Use camera instead of switch")
-- `dwellTime`: how long to face a zone to select it.
+- `dwellTime`: how long to face a zone to select it (2.5 s).
 - `noFaceAfter`: how long without a face before "No learner detected" and the switch board returns.
-- `backAfter`: how long inside a row with no choice before going back to the top level.
+- `backAfter`: how long inside a row with no choice before going back to the top level (10 s).
 - `afterSelectPause`: extra wait before the same zone can be chosen again.
 - `yawThreshold`, `pitchThreshold`: how far to turn or tilt your head to change zone. Raise them if zones change too easily, lower them if you have to turn too far.
 - `calibrationFrames`: how many frames count as "straight ahead" when the camera starts (about 1 second). Hold still then.
@@ -71,8 +90,12 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 **The "AI"**
 - `vocabulary`: about 150 words used for word completions.
-- `phrases`: about 30 full answers used for sentence completions.
+- `phrases`: about 30 full answers used for letter, word and sentence suggestions.
 - In both lists, earlier means "more likely". Reorder them to change what the system pushes first.
+
+## Voices
+
+The voices come from the computer, so they sound different on each machine. Test on the laptop you'll present from. Chrome on a Mac (Samantha, Ava) or Windows 11 ("Natural" voices) gives the best range from robotic to human. If a name in `voice.prefer` isn't found, the browser's default voice is used with that level's rate and pitch.
 
 ## Privacy
 
