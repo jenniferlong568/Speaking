@@ -145,6 +145,9 @@ body {
   }
 }
 
+/* Levels 3+: the learner's words the AI didn't use fade away before it speaks */
+.ch.vanish { opacity: 0; filter: blur(4px); transition: opacity 0.8s, filter 0.8s; }
+
 /* Blinking caret at the end of the sentence */
 .caret {
   display: inline-block;
@@ -742,6 +745,8 @@ const CONFIG = {
   },
   // After it speaks, the system "acts" for the learner: these mock links
   // appear one by one under the sentence. They do nothing when clicked.
+  vanishFromLevel: 3,     // from this level up, words the AI didn't take up fade away before it speaks
+  vanishTime: 900,        // how long that fade takes (ms)
   takeoverActions: {
     label: "Done for you",
     links: ["Message Mom: pick me up early", "Cancel after-school club", "Calendar: rest at home, 3:30 PM", "Book a ride home"],
@@ -1024,6 +1029,39 @@ function autocorrect(includeLast) {
     i = start - 1;
   }
   return changed;
+}
+
+// Levels 3 and up, just before speaking: whatever the AI didn't take up
+// disappears. Any word that is mostly the learner's (their own words, stray
+// letters, mistakes, even ones autocorrect patched) fades out and is removed, so only
+// the machine's sentence (and any learner letter it grew from) is spoken.
+// If there are no AI letters at all, nothing is removed.
+function vanishUnattached(then) {
+  if (session.level < CONFIG.vanishFromLevel || !sentence.some(c => c.author === "ai")) { then(); return; }
+  const remove = new Set();
+  for (let i = 0; i < sentence.length;) {
+    if (sentence[i].char === " ") { i++; continue; }
+    let end = i;
+    while (end < sentence.length && sentence[end].char !== " ") end++;
+    const word = sentence.slice(i, end);
+    if (word.filter(c => c.author === "ai").length * 2 < word.length) {   // mostly the learner's
+      for (let k = i; k < end; k++) remove.add(k);
+      if (end < sentence.length) remove.add(end);       // and the space after it
+    }
+    i = end;
+  }
+  if (!remove.size) { then(); return; }
+  const spans = stripEl.querySelectorAll(".ch");
+  remove.forEach(k => spans[k] && spans[k].classList.add("vanish"));
+  const myRun = runId;
+  later(() => {
+    if (myRun !== runId) return;
+    sentence = sentence.filter((c, k) => !remove.has(k));
+    while (sentence.length && sentence[0].char === " ") sentence.shift();
+    renderSentence();
+    renderAuthorship();
+    then();
+  }, CONFIG.vanishTime);
 }
 
 // Remove the last character, whoever wrote it.
@@ -1457,8 +1495,13 @@ function chooseItem(r, i) {
   if (item.type === "speak" && sentenceText().trim()) {
     autocorrect(true);
     renderSentence();
-    speak(sentenceText());
-    later(showEnd, 400);   // the learner chose to speak: that's the end
+    if (session.level >= CONFIG.vanishFromLevel) {
+      clearInterval(scanTimer);
+      vanishUnattached(() => { speak(sentenceText()); later(showEnd, 400); });
+    } else {
+      speak(sentenceText());
+      later(showEnd, 400);   // the learner chose to speak: that's the end
+    }
   }
   if (item.type === "prediction") addText(item.value, "ai");   // the AI's letters
   if (item.type === "pick-sentence") {
@@ -1472,7 +1515,8 @@ function chooseItem(r, i) {
     scan.row = -1;
     boardAreaEl.classList.add("gone");
     const myRun = runId;
-    later(() => speak(sentenceText(), () => { if (myRun === runId) later(showEnd, 900); }), 500);
+    later(() => vanishUnattached(() =>
+      speak(sentenceText(), () => { if (myRun === runId) later(showEnd, 900); })), 500);
     return;
   }
 
@@ -1611,7 +1655,7 @@ function startTakeover() {
       i++;
       if (i >= text.length) {
         clearInterval(typer);
-        speak(spoken, () => { if (myRun === runId) finishTakeover(); });
+        vanishUnattached(() => speak(sentenceText(), () => { if (myRun === runId) finishTakeover(); }));
       }
     }, CONFIG.takeoverTypeSpeed);
   }, CONFIG.takeoverDelay);

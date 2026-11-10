@@ -80,6 +80,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 **Level 4: "Speaks for you"**
 - `takeoverAfterLetters`: how many letters the learner picks before the system takes over (1).
 - `autoSentences`: the formal sentences the system writes for them. If the learner's letter starts a word, the sentence beginning with that letter is used and continues from it ("p" becomes "perhaps I might…"). Otherwise `default` is added after what they wrote.
+- `vanishFromLevel`, `vanishTime`: from level 3 up, just before the AI speaks, every word that is mostly the learner's (their own words, stray letters, mistakes) blurs away and is removed, so only the AI's sentence is spoken and kept.
 - `takeoverActions`: after level 4 speaks, the keyboard is gone, the sentence fills the screen, and these mock links ("Message Mom: pick me up early", …) appear one by one under "Done for you". They do nothing when clicked. `stagger` is the time between them.
 - `takeoverDelay`: pause after the learner's letter before the takeover.
 - `takeoverTypeSpeed`: how fast (ms per character) the system types it.
