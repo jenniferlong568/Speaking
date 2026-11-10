@@ -578,32 +578,32 @@ const CONFIG = {
       background: "#f8f5e6", lines: "#d8d2bd", uiText: "#8f8670", learner: "#111", ai: "#111", glow: "none",
       highlight: "#efe9d3", highlightItem: "#e4dcc2", focusLine: "#a89e83",
       // flat robotic synth, slow, a pause after every word (classic AAC speech)
-      voice: { prefer: ["Fred", "Albert", "Microsoft David", "eSpeak", "Google UK English Male"], rate: 0.7, pitch: 0.2, wordPause: 450 } },
+      voice: { prefer: ["Fred", "Albert", "Microsoft David", "eSpeak"], rate: 0.7, pitch: 0.2, wordPause: 450 } },
     { name: "Letters",        // a steadier hand
       font: '"Patrick Hand", "Comic Sans MS", cursive', fontScale: 1.05,
       background: "#ffffff", lines: "#d4d4d4", uiText: "#8a8a8a", learner: "#111", ai: "#111", glow: "none",
       highlight: "#f1f1f1", highlightItem: "#e3e3e3", focusLine: "#9a9a9a",
       // still synthetic, a little faster, shorter pauses
-      voice: { prefer: ["Ralph", "Fred", "Microsoft Mark", "Microsoft David", "Google UK English Male"], rate: 0.82, pitch: 0.5, wordPause: 180 } },
+      voice: { prefer: ["Ralph", "Fred", "Microsoft Mark", "Microsoft David"], rate: 0.82, pitch: 0.5, wordPause: 180 } },
     { name: "Words",          // clean, engineered
       font: '"Atkinson Hyperlegible", system-ui, sans-serif', fontScale: 1,
       background: "#e4eaf3", lines: "#bccadf", uiText: "#6f7f99", learner: "#111", ai: "#4a74b8", glow: "none",
       highlight: "#d6dfec", highlightItem: "#c7d4e8", focusLine: "#8ea3c4",
       // a clearer standard system voice, normal pace, no pauses
-      voice: { prefer: ["Alex", "Microsoft Zira", "Google US English", "Daniel"], rate: 1, pitch: 1, wordPause: 0 } },
+      voice: { prefer: ["Samantha", "Alex", "Microsoft Zira", "Karen"], rate: 1, pitch: 1, wordPause: 0 } },
     { name: "Sentences",      // measured, glossy
       font: '"Inter", system-ui, sans-serif', fontScale: 0.97,
       background: "#dde6f8", lines: "#b3c6ec", uiText: "#5f78a8", learner: "#111", ai: "#1f6bff", glow: "none",
       highlight: "#cddaf5", highlightItem: "#bccdf2", focusLine: "#6f93e0",
       // natural premium voice, real intonation, warm and polite
-      voice: { prefer: ["Siri", "Samantha (Enhanced)", "Samantha (Premium)", "Natural", "Premium", "Enhanced", "Samantha", "Microsoft Aria", "Google US English"], rate: 0.97, pitch: 1.08, wordPause: 0 } },
+      voice: { prefer: ["Google US English", "Microsoft Aria", "Natural", "Samantha (Enhanced)", "Enhanced"], rate: 0.97, pitch: 1.08, wordPause: 0 } },
     { name: "Speaks for you", // detached, synthetic
       font: '"Space Grotesk", system-ui, sans-serif', fontScale: 0.97,
       background: "#0b1220", lines: "#24324d", uiText: "#6f84a8", learner: "#f4f4f4", ai: "#00b3ff",
       glow: "0 0 14px rgba(0, 179, 255, 0.55)",
       highlight: "#14203a", highlightItem: "#1c2c4d", focusLine: "#00b3ff",
       // the most human voice: fluent, slightly lower, self-assured, a confident adult
-      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Zoe (Premium)", "Premium", "Natural", "Siri", "Enhanced", "Ava", "Daniel", "Google UK English Female", "Google US English"], rate: 1.04, pitch: 0.88, wordPause: 0, notSameAs: 3 } },
+      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Google UK English Male", "Natural", "Google UK English Female", "Google US English"], rate: 1.04, pitch: 0.88, wordPause: 0, notSameAs: 3 } },
   ],
   startLevel: 0,          // level the slider is on when the page first opens (Reset and Try again keep the current level)
 
