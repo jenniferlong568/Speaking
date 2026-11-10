@@ -26,11 +26,11 @@ Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end scre
 
 | Level | Look and font | What the AI offers | Voice |
 |---|---|---|---|
-| 0 Off | cream paper, Waiting for the Sunrise | nothing | flat, slow, robotic |
-| 1 Letters | white, Patrick Hand | 3 next letters | a little smoother |
-| 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | clear |
-| 3 Sentences | light blue, Inter | 3 full sentences, scanned first | natural |
-| 4 Speaks for you | dark navy, Space Grotesk, glowing blue | after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer |
+| 0 Off | cream paper, Waiting for the Sunrise | nothing | flat robotic synth, slow, a pause after every word (classic AAC) |
+| 1 Letters | white, Patrick Hand | 3 next letters | still synthetic, a little faster, shorter pauses |
+| 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | a clearer standard voice, normal pace, no pauses |
+| 3 Sentences | light blue, Inter | after one letter the keyboard goes and 4 sentences that **begin with that letter** take its place | a natural, premium voice (Siri / "natural" voices), warm and polite |
+| 4 Speaks for you | dark navy, Space Grotesk, glowing blue | after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer, slightly lower and self-assured (a different voice from level 3 when one exists) |
 
 The learner's letters are always solid, and the AI's are always hollow outlines (or faded, in "grey" mode). The screen's colours follow the slider, but **every letter keeps the font of the level it was written at**, so a sentence shows how it was made. The authorship bar under the sentence shows the learner's share (solid) against the AI's (outlined), with no numbers.
 
@@ -51,6 +51,8 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `highlight`, `highlightItem`, `focusLine`: the scanning highlight and the dwell ring.
 - `voice.prefer`: voice names to look for, in order. The first one this computer has is used, matched loosely ("Ava" finds "Ava (Premium)").
 - `voice.rate`, `voice.pitch`: speed and pitch (1 = normal). Low pitch and rate sound more robotic.
+- `voice.wordPause`: silence (ms) after every word. 450 at level 0, 180 at level 1, 0 (fluent) from level 2 up.
+- `voice.notSameAs`: a level whose voice to avoid, so level 4 doesn't sound the same as level 3.
 - `startLevel`: the level when the page first opens.
 
 **Look**
@@ -67,6 +69,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 
 **What the AI offers**
 - `lettersAtLevel1`, `wordsAtLevel2`, `sentencesAtLevel3`: how many suggestions each level shows.
+- `sentencesAfterLetter`, `level3Sentences`: at level 3, after the first letter the keyboard is replaced by this many sentences. They come from `level3Sentences`, plain everyday answers grouped by first letter, so every sentence starts with the learner's letter ("p" → "Play outside with my friends.", with the "p" solid).
 - `letterFrequency`: the letter order level 1 falls back on when the phrases have no guess.
 
 **Level 4: "Speaks for you"**

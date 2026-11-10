@@ -558,34 +558,41 @@ const CONFIG = {
   //              ai (hollow outline), glow (behind AI letters, or "none"),
   //              highlight / highlightItem / focusLine (the scanner)
   //   voice:     prefer = voice names to look for, in order (first one found
-  //              on this computer wins); rate and pitch (1 = normal)
+  //              on this computer wins); rate and pitch (1 = normal);
+  //              wordPause = ms of silence after every word (0 = speaks fluently);
+  //              notSameAs = a level whose voice this one should avoid, so they sound different
   levels: [
     { name: "Off",            // handmade, paper
       font: '"Waiting for the Sunrise", "Comic Sans MS", cursive', fontScale: 1.12,
       background: "#f8f5e6", lines: "#d8d2bd", uiText: "#8f8670", learner: "#111", ai: "#111", glow: "none",
       highlight: "#efe9d3", highlightItem: "#e4dcc2", focusLine: "#a89e83",
-      voice: { prefer: ["Fred", "Microsoft David", "eSpeak", "Google UK English Male"], rate: 0.75, pitch: 0.3 } },
+      // flat robotic synth, slow, a pause after every word (classic AAC speech)
+      voice: { prefer: ["Fred", "Albert", "Microsoft David", "eSpeak", "Google UK English Male"], rate: 0.7, pitch: 0.2, wordPause: 450 } },
     { name: "Letters",        // a steadier hand
       font: '"Patrick Hand", "Comic Sans MS", cursive', fontScale: 1.05,
       background: "#ffffff", lines: "#d4d4d4", uiText: "#8a8a8a", learner: "#111", ai: "#111", glow: "none",
       highlight: "#f1f1f1", highlightItem: "#e3e3e3", focusLine: "#9a9a9a",
-      voice: { prefer: ["Fred", "Microsoft David", "Google UK English Male"], rate: 0.85, pitch: 0.6 } },
+      // still synthetic, a little faster, shorter pauses
+      voice: { prefer: ["Ralph", "Fred", "Microsoft Mark", "Microsoft David", "Google UK English Male"], rate: 0.82, pitch: 0.5, wordPause: 180 } },
     { name: "Words",          // clean, engineered
       font: '"Atkinson Hyperlegible", system-ui, sans-serif', fontScale: 1,
       background: "#e4eaf3", lines: "#bccadf", uiText: "#6f7f99", learner: "#111", ai: "#4a74b8", glow: "none",
       highlight: "#d6dfec", highlightItem: "#c7d4e8", focusLine: "#8ea3c4",
-      voice: { prefer: ["Microsoft Zira", "Google US English", "Alex"], rate: 0.95, pitch: 0.9 } },
+      // a clearer standard system voice, normal pace, no pauses
+      voice: { prefer: ["Alex", "Microsoft Zira", "Google US English", "Daniel"], rate: 1, pitch: 1, wordPause: 0 } },
     { name: "Sentences",      // measured, glossy
       font: '"Inter", system-ui, sans-serif', fontScale: 0.97,
       background: "#dde6f8", lines: "#b3c6ec", uiText: "#5f78a8", learner: "#111", ai: "#1f6bff", glow: "none",
       highlight: "#cddaf5", highlightItem: "#bccdf2", focusLine: "#6f93e0",
-      voice: { prefer: ["Samantha", "Google US English", "Microsoft Aria"], rate: 1, pitch: 1 } },
+      // natural premium voice, real intonation, warm and polite
+      voice: { prefer: ["Siri", "Samantha (Enhanced)", "Samantha (Premium)", "Natural", "Premium", "Enhanced", "Samantha", "Microsoft Aria", "Google US English"], rate: 0.97, pitch: 1.08, wordPause: 0 } },
     { name: "Speaks for you", // detached, synthetic
       font: '"Space Grotesk", system-ui, sans-serif', fontScale: 0.97,
       background: "#0b1220", lines: "#24324d", uiText: "#6f84a8", learner: "#f4f4f4", ai: "#00b3ff",
       glow: "0 0 14px rgba(0, 179, 255, 0.55)",
       highlight: "#14203a", highlightItem: "#1c2c4d", focusLine: "#00b3ff",
-      voice: { prefer: ["Natural", "Premium", "Enhanced", "Ava", "Samantha", "Google US English"], rate: 1, pitch: 1.05 } },
+      // the most human voice: fluent, slightly lower, self-assured, a confident adult
+      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Zoe (Premium)", "Premium", "Natural", "Siri", "Enhanced", "Ava", "Daniel", "Google UK English Female", "Google US English"], rate: 1.04, pitch: 0.88, wordPause: 0, notSameAs: 3 } },
   ],
   startLevel: 0,          // level the slider is on when the page first opens (Reset and Try again keep the current level)
 
@@ -618,6 +625,37 @@ const CONFIG = {
   wordsAtLevel2: 3,       // level 2: word completions offered
   sentencesAtLevel3: 3,   // levels 3-4: full sentences offered (scanned first)
   sentencesAfterLetter: 4, // level 3: after the first letter the keyboard goes; this many sentences replace it
+  // Level 3's sentences: plain, everyday answers, grouped by first letter.
+  // Every sentence offered begins with the learner's letter ("p" → "Play
+  // outside with my friends."): the "p" stays solid, the rest is hollow.
+  level3Sentences: {
+    a: ["After school I want to rest.", "Ask my friend to come over.", "Art, I want to paint something.", "A snack and a nap, please."],
+    b: ["Bike ride with my brother.", "Build something with lego.", "Bake cookies with my mom.", "Be at home and relax."],
+    c: ["Call my grandma.", "Cook dinner with my dad.", "Can I go to the park?", "Color a picture."],
+    d: ["Draw a picture.", "Do nothing for a while.", "Dance to my favorite song.", "Do my homework first."],
+    e: ["Eat a snack.", "Every day I want to play outside.", "Eat dinner with my family.", "Explore the park."],
+    f: ["Find my friends and play.", "Feed my dog.", "Fly a kite outside.", "Finish my book."],
+    g: ["Go home and rest.", "Go to the park.", "Go swimming.", "Get ice cream."],
+    h: ["Hang out with my friends.", "Help my mom cook dinner.", "Have a snack.", "Home, I want to go home."],
+    i: ["I want to go home and rest.", "I want to play outside with my friends.", "I am tired and want to stop.", "I need a break."],
+    j: ["Jump on the trampoline.", "Just rest at home.", "Join my friends at the park.", "Juice and a snack, please."],
+    k: ["Kick a ball outside.", "Keep reading my book.", "Kiss my mom hello.", "Knit with my grandma."],
+    l: ["Listen to music.", "Look at my books.", "Lie down and rest.", "Learn a new game."],
+    m: ["My friend is coming over.", "Make a cake.", "Music, I want music.", "Meet my friends."],
+    n: ["Nothing, I just want quiet.", "Nap on the couch.", "No homework today, please.", "New game with my friends."],
+    o: ["Outside, I want to play outside.", "Open my new book.", "Order pizza for dinner.", "One more game, please."],
+    p: ["Play outside with my friends.", "Play video games.", "Paint a picture.", "Pet my dog."],
+    q: ["Quiet time at home.", "Quick snack, then play.", "Question: can I go out?", "Quit for today."],
+    r: ["Read a book.", "Ride my bike.", "Rest on the couch.", "Run around outside."],
+    s: ["See my friends.", "Sleep.", "Swim at the pool.", "Sing a song."],
+    t: ["Take a nap.", "Talk to my friend.", "Too tired, I want to stop.", "Turn on the TV."],
+    u: ["Use the computer.", "Under a blanket, resting.", "Up to my room to rest.", "Uno with my family."],
+    v: ["Video games with my friends.", "Visit my grandma.", "Very tired, I want to rest.", "Volleyball outside."],
+    w: ["Watch a movie.", "Walk my dog.", "Want to go home.", "Write a story."],
+    x: ["Xylophone, I want to play music.", "X-box with my brother.", "X marks the spot, a treasure hunt.", "Xtra snack time, please."],
+    y: ["Yes, I want to play outside.", "Yoga with my mom.", "You can come play with me.", "Yell and run outside."],
+    z: ["Zoo with my family.", "Zoom around on my scooter.", "Zero homework, please.", "Zip up my coat and go outside."],
+  },
   // Fallback letter order for level 1 when the phrases have no guess.
   letterFrequency: "etaoinshrdlucmfwypvbgkjqxz",
 
@@ -878,32 +916,55 @@ if ("speechSynthesis" in window) {
 // Pick the voice for a level: the first name in its "prefer" list that
 // this computer has (matched loosely, so "Ava" finds "Ava (Premium)").
 function voiceForLevel(level) {
-  for (const want of CONFIG.levels[level].voice.prefer) {
-    const v = voices.find(v => v.name.toLowerCase().includes(want.toLowerCase()));
+  const settings = CONFIG.levels[level].voice;
+  const avoid = settings.notSameAs != null && settings.notSameAs !== level ? voiceForLevel(settings.notSameAs) : null;
+  let fallback = null;
+  for (const want of settings.prefer) {
+    const v = voices.find(v => v.name.toLowerCase().includes(want.toLowerCase()) && v !== avoid);
     if (v) return v;
+    if (!fallback) fallback = voices.find(v => v.name.toLowerCase().includes(want.toLowerCase())) || null;
   }
-  return null;   // fall back to the browser's default voice
+  return fallback;   // null = the browser's default voice
 }
 
 // Read text aloud in the current level's voice: robotic at 0, most human at 4.
 // onDone (optional) runs when speech finishes, or right away if there's no voice.
+// At levels with a wordPause it speaks one word at a time with silence between
+// (clunky AAC speech); otherwise the whole sentence in one fluent breath.
+let speechId = 0;
+let currentUtterance = null;   // kept so the browser doesn't drop it before it ends
 function speak(text, onDone) {
-  if (!("speechSynthesis" in window) || !text.trim()) { if (onDone) onDone(); return; }
+  const myId = ++speechId;
+  let done = false;
+  const finish = () => { if (!done && myId === speechId) { done = true; if (onDone) onDone(); } };
+  if (!("speechSynthesis" in window) || !text.trim()) { done = true; if (onDone) onDone(); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const settings = CONFIG.levels[session.level].voice;
-  const v = voiceForLevel(session.level);
-  if (v) { u.voice = v; u.lang = v.lang; }
-  u.rate = settings.rate;
-  u.pitch = settings.pitch;
-  if (onDone) {
-    let done = false;
-    const finish = () => { if (!done) { done = true; onDone(); } };
-    u.onend = finish;
-    u.onerror = finish;
-    setTimeout(finish, 8000);   // safety net if the browser never fires onend
-  }
-  speechSynthesis.speak(u);
+  const level = session.level;
+  const settings = CONFIG.levels[level].voice;
+  const v = voiceForLevel(level);
+  const pause = settings.wordPause || 0;
+  const parts = pause > 0 ? text.trim().split(/\s+/) : [text];
+  const say = (i) => {
+    if (myId !== speechId) return;            // stopped or replaced
+    if (i >= parts.length) { finish(); return; }
+    const u = new SpeechSynthesisUtterance(parts[i]);
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = settings.rate;
+    u.pitch = settings.pitch;
+    let next = false;
+    const goOn = () => { if (next) return; next = true; setTimeout(() => say(i + 1), i + 1 < parts.length ? pause : 0); };
+    u.onend = goOn;
+    u.onerror = goOn;
+    // safety net if the browser never fires onend
+    setTimeout(goOn, Math.max(3000, parts[i].length * 160 / settings.rate));
+    currentUtterance = u;
+    speechSynthesis.speak(u);
+  };
+  say(0);
+}
+function stopSpeaking() {
+  speechId++;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
 }
 
 // Who wrote how much. Counts visible characters only (spaces don't count).
@@ -1230,7 +1291,7 @@ function chooseItem(r, i) {
     scan.row = -1;
     boardAreaEl.classList.add("gone");
     const myRun = runId;
-    later(() => speak(item.label, () => { if (myRun === runId) later(showEnd, 900); }), 500);
+    later(() => speak(sentenceText(), () => { if (myRun === runId) later(showEnd, 900); }), 500);
     return;
   }
 
@@ -1277,12 +1338,21 @@ function likelySentences(max) {
   const lower = typed.toLowerCase();
   const letter = lower.trim().slice(-1);
   const gap = typed === "" || typed.endsWith(" ") ? "" : " ";
+  // The word the learner is in the middle of ("p", or "pl"): every sentence
+  // offered starts with it, so their letter is the sentence's first letter.
+  const word = (lower.match(/[^\s]+$/) || [""])[0];
   const out = [];
   const add = (label, insert) => {
     if (out.length < max && !out.some(o => o.label === label)) out.push({ label, insert });
   };
   for (const ph of CONFIG.phrases) {
     if (ph.toLowerCase().startsWith(lower) && ph.length > typed.length) add(ph, ph.slice(typed.length));
+  }
+  if (word) {
+    const bank = [...(CONFIG.level3Sentences[word[0]] || []), ...CONFIG.phrases];
+    for (const sn of bank) {
+      if (sn.toLowerCase().startsWith(word) && sn.length > word.length) add(sn, sn.slice(word.length));
+    }
   }
   for (const ph of CONFIG.phrases) {
     if (ph.toLowerCase().split(/\s+/).some(w => w.startsWith(letter))) add(ph, gap + ph);
@@ -1817,7 +1887,7 @@ function showEnd() {
 // Used by the Reset button, the R key and "Try again".
 function resetRun() {
   runId++;                                   // cancels any pending takeover / end screen
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  stopSpeaking();
   sentence = [];
   Object.assign(session, {
     selections: 0, startTime: null, endTime: null,
