@@ -50,6 +50,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 - `learner`: colour of the learner's solid letters (off-white at level 4 so they show on navy).
 - `ai`, `glow`: colour of the AI's hollow letters, and an optional glow behind them (`"none"` for no glow).
 - `highlight`, `highlightItem`, `focusLine`: the scanning highlight and the dwell ring.
+- `space`: how much room the learner gets at that level. `keyGap`/`rowGap` (space between keys and rows), `keyScale` (key letter size), `suggestions` (height of the AI's suggestion row compared with one keyboard row; 0 = none), `sentenceScale` (sentence size), `tracking` (letter spacing of letters written at that level, loose at 0 and tight at 4), `scanSpeed` (ms per scan step, slow at 0 and faster each level). As the levels rise, the keys shrink and crowd together while the AI's suggestions and sentence grow.
 - `voice.prefer`: voice names to look for, in order. The first one this computer has is used, matched loosely ("Ava" finds "Ava (Premium)").
 - `voice.rate`, `voice.pitch`: speed and pitch (1 = normal). Low pitch and rate sound more robotic.
 - `voice.wordPause`: silence (ms) after every word. 450 at level 0, 180 at level 1, 0 (fluent) from level 2 up.
@@ -79,6 +80,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 **Level 4: "Speaks for you"**
 - `takeoverAfterLetters`: how many letters the learner picks before the system takes over (1).
 - `autoSentences`: the formal sentences the system writes for them. If the learner's letter starts a word, the sentence beginning with that letter is used and continues from it ("p" becomes "perhaps I might…"). Otherwise `default` is added after what they wrote.
+- `takeoverActions`: after level 4 speaks, the keyboard is gone, the sentence fills the screen, and these mock links ("Message Mom: pick me up early", …) appear one by one under "Done for you". They do nothing when clicked. `stagger` is the time between them.
 - `takeoverDelay`: pause after the learner's letter before the takeover.
 - `takeoverTypeSpeed`: how fast (ms per character) the system types it.
 - `endAfterSent`: how long "Sent to teacher." shows before the end screen.
