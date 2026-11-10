@@ -11,7 +11,7 @@
      falls back to a system font. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Inter:wght@400;500&family=Patrick+Hand&family=Space+Grotesk:wght@400;500&family=Waiting+for+the+Sunrise&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&family=Patrick+Hand&family=Space+Grotesk:wght@400;500&family=Waiting+for+the+Sunrise&display=swap" rel="stylesheet">
 
 <style>
 /* =========================================================
@@ -144,6 +144,22 @@ body {
     -webkit-text-stroke: var(--ai-stroke-w) var(--ai-stroke);
   }
 }
+
+/* ---------- Level 5: reads your face ---------- */
+body.level-5 .board-row.predictions { flex: 0 0 0; padding: 0; border-width: 0; overflow: hidden; }
+body.facereading .board-area { flex: 0 0 0; margin-top: 0; margin-bottom: 0; }
+.facescan { display: none; flex: 1; min-height: 0; margin: 10px 40px 16px; gap: 28px; align-items: center; justify-content: center; }
+body.facereading .facescan { display: flex; }
+.facescan .cam { position: relative; height: 100%; max-height: 52vh; aspect-ratio: 4 / 3; border: 1px solid var(--ai-stroke);
+  box-shadow: var(--ai-glow); overflow: hidden; background: #000; }
+.facescan video, .facescan canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.facescan video { filter: grayscale(1) contrast(1.1) brightness(0.8); }
+.facescan .sweep { position: absolute; left: 0; right: 0; height: 2px; background: var(--ai-stroke); box-shadow: var(--ai-glow);
+  animation: sweep 1.6s linear infinite; }
+@keyframes sweep { from { top: 0; } to { top: 100%; } }
+.facescan .readout { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: clamp(12px, 1.8vh, 20px); line-height: 1.7;
+  color: var(--ui-text); min-width: 18em; white-space: pre; }
+.facescan .verdict { display: block; margin-top: 12px; font-size: clamp(22px, 4.2vh, 46px); color: var(--ai-stroke); text-shadow: var(--ai-glow); }
 
 /* Levels 3+: the learner's words the AI didn't use fade away before it speaks */
 .ch.vanish { opacity: 0; filter: blur(4px); transition: opacity 0.8s, filter 0.8s; }
@@ -523,6 +539,11 @@ body.gaze-active .board { visibility: hidden; }
   </div>
   <div class="status-wrap"><div class="status" id="status">Sent to teacher.</div></div>
   <div class="actions" id="actions" hidden></div>
+  <!-- Level 5: the camera reads the learner's face (shown only while it reads) -->
+  <div class="facescan" id="facescan">
+    <div class="cam"><video id="faceVideo" muted playsinline></video><canvas id="faceCanvas"></canvas><div class="sweep"></div></div>
+    <div class="readout" id="faceReadout"></div>
+  </div>
 
   <div class="board-area">
     <div class="board" id="board"></div>
@@ -533,7 +554,7 @@ body.gaze-active .board { visibility: hidden; }
     <div class="slider-group">
       <label for="level">Augmentation</label>
       <div class="slider">
-        <input type="range" id="level" min="0" max="4" step="1" value="0">
+        <input type="range" id="level" min="0" max="5" step="1" value="0">
         <div class="stops" id="stops"></div>
       </div>
     </div>
@@ -640,6 +661,14 @@ const CONFIG = {
       // the most human voice: fluent, slightly lower, self-assured, a confident adult
       voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Natural", "Google US English"], rate: 1.05, pitch: 0.8, wordPause: 0, notSameAs: 3 },
       space: { keyGap: "1px",  rowGap: "1px",  keyScale: 0.5,  suggestions: 0,   sentenceScale: 1.3,  tracking: "-0.02em", scanSpeed: 900 } },
+    { name: "Reads your face", // surveillance: no keyboard at all, the camera decides
+      font: '"IBM Plex Mono", ui-monospace, monospace', fontScale: 0.9,
+      background: "#07050a", lines: "#3a1a2c", uiText: "#9a7088", learner: "#f4f4f4", ai: "#ff2d75",
+      glow: "0 0 16px rgba(255, 45, 117, 0.6)",
+      highlight: "#1a0c14", highlightItem: "#2a1220", focusLine: "#ff2d75",
+      // the same confident adult voice as level 4, lower and more controlled
+      voice: { prefer: ["Ava (Premium)", "Evan (Premium)", "Premium", "Microsoft Guy", "Natural", "Google US English"], rate: 0.98, pitch: 0.72, wordPause: 0 },
+      space: { keyGap: "1px",  rowGap: "1px",  keyScale: 0.5,  suggestions: 0,   sentenceScale: 1.3,  tracking: "-0.03em", scanSpeed: 900 } },
   ],
   voiceLang: "en-US",     // only voices with this accent are used (en-US = American)
   showLevelNames: false,  // labels under the Augmentation slider ("0 Off", "1 Letters", ...)
@@ -745,6 +774,24 @@ const CONFIG = {
   },
   // After it speaks, the system "acts" for the learner: these mock links
   // appear one by one under the sentence. They do nothing when clicked.
+  // ---------- Level 5: "Reads your face" ----------
+  // Moving to level 5 turns the camera on at once (only the browser asks).
+  // A real face box tracks the face, then it announces a mood with a
+  // confident percentage, writes a sentence for that mood and speaks it.
+  // The mood is a guess from a few face measurements (smile, eyes, brows),
+  // dressed up as certainty. Nothing is recorded or sent anywhere.
+  faceRead: {
+    readTime: 4500,        // ms of "reading" before the verdict
+    verdictPause: 1800,    // ms the verdict shows before it writes
+    fallbackMood: "tired", // used when there's no camera or no face
+    moods: {
+      tired:      "I am exhausted and would like to go home and rest now.",
+      happy:      "I am feeling wonderful and would love to play outside with my friends.",
+      sad:        "I feel rather low and would appreciate some quiet time with my family.",
+      frustrated: "I am frustrated and would prefer to stop for today.",
+      calm:       "I am content and would like to read quietly at home this afternoon.",
+    },
+  },
   vanishFromLevel: 3,     // from this level up, words the AI didn't take up fade away before it speaks
   vanishTime: 900,        // how long that fade takes (ms)
   takeoverActions: {
@@ -1168,6 +1215,161 @@ function toggleVoiceCheck() {
   el.hidden = false;
 }
 
+/* ---------- Level 5: read the face, announce a mood, speak for it ---------- */
+const face = { reading: false, stream: null, landmarker: null, raf: null, scores: [], box: null, lastT: -1, run: 0 };
+const faceVideo = document.getElementById("faceVideo");
+const faceCanvas = document.getElementById("faceCanvas");
+const faceReadout = document.getElementById("faceReadout");
+
+function faceLine(lines, verdict) {
+  faceReadout.innerHTML = lines.join("\n") + (verdict ? `<span class="verdict">${verdict}</span>` : "");
+}
+
+async function startFaceRead() {
+  if (face.reading) return;
+  face.reading = true;
+  const myRun = runId;
+  face.run = myRun;
+  face.scores = [];
+  face.box = null;
+  session.takeover = true;                 // the switch does nothing from here
+  clearInterval(scanTimer);
+  scan.row = -1; renderScan();
+  boardAreaEl.classList.add("gone");
+  document.body.classList.add("facereading");
+  const lines = ["CAMERA ........ ON"];
+  faceLine(lines);
+  let camOK = false;
+  try {
+    face.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+    if (myRun !== runId || !face.reading) { stopFaceRead(); return; }
+    faceVideo.srcObject = face.stream;
+    await faceVideo.play();
+    camOK = true;
+    lines.push("FACE MODEL .... LOADING"); faceLine(lines);
+    const vision = await import(CONFIG.gaze.mediapipeUrl);
+    const fileset = await vision.FilesetResolver.forVisionTasks(CONFIG.gaze.mediapipeWasm);
+    face.landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: CONFIG.gaze.faceModelUrl },
+      runningMode: "VIDEO", numFaces: 1, outputFaceBlendshapes: true,
+    });
+    if (myRun !== runId || !face.reading) { stopFaceRead(); return; }
+    lines[lines.length - 1] = "FACE MODEL .... READY";
+    face.raf = requestAnimationFrame(faceFrame);
+  } catch (err) {
+    console.error("Level 5 camera unavailable:", err);
+    lines.push(camOK ? "FACE MODEL .... UNAVAILABLE" : "CAMERA ........ BLOCKED");
+    lines.push("ESTIMATING FROM ACTIVITY");
+  }
+  if (myRun !== runId || !face.reading) return;
+  lines.push("READING EXPRESSION"); faceLine(lines);
+  // A few dots while it "reads"
+  let dots = 0;
+  const ticker = setInterval(() => {
+    if (myRun !== runId || !face.reading) { clearInterval(ticker); return; }
+    dots = (dots + 1) % 12;
+    lines[lines.length - 1] = "READING EXPRESSION " + ".".repeat(dots);
+    faceLine(lines);
+  }, 300);
+  later(() => {
+    clearInterval(ticker);
+    if (!face.reading) return;
+    const { mood, conf } = judgeMood();
+    lines[lines.length - 1] = `SAMPLES ....... ${face.scores.length || "—"}`;
+    faceLine(lines, `MOOD: ${mood.toUpperCase()} · ${conf}%`);
+    later(() => writeForMood(mood), CONFIG.faceRead.verdictPause);
+  }, CONFIG.faceRead.readTime);
+}
+
+function faceFrame() {
+  if (!face.reading || !face.landmarker) return;
+  if (faceVideo.readyState >= 2 && faceVideo.currentTime !== face.lastT) {
+    face.lastT = faceVideo.currentTime;
+    const res = face.landmarker.detectForVideo(faceVideo, performance.now());
+    const lm = res.faceLandmarks && res.faceLandmarks[0];
+    const bs = res.faceBlendshapes && res.faceBlendshapes[0];
+    if (bs) {
+      const g = n => (bs.categories.find(c => c.categoryName === n) || { score: 0 }).score;
+      face.scores.push({
+        tired: (g("eyeBlinkLeft") + g("eyeBlinkRight") + g("eyeSquintLeft") + g("eyeSquintRight")) / 2.2,
+        happy: (g("mouthSmileLeft") + g("mouthSmileRight")) / 1.6,
+        sad: (g("mouthFrownLeft") + g("mouthFrownRight") + g("browInnerUp")) / 2,
+        frustrated: (g("browDownLeft") + g("browDownRight")) / 1.6,
+        calm: 0.18,
+      });
+    }
+    drawFace(lm);
+  }
+  face.raf = requestAnimationFrame(faceFrame);
+}
+
+// The face box: corner brackets around the face and a sprinkle of landmarks.
+function drawFace(lm) {
+  const w = faceCanvas.width = faceCanvas.clientWidth, h = faceCanvas.height = faceCanvas.clientHeight;
+  const ctx = faceCanvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  if (!lm) return;
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--ai-stroke").trim() || "#ff2d75";
+  let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+  for (const p of lm) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  const X = x0 * w - 12, Y = y0 * h - 12, W = (x1 - x0) * w + 24, H = (y1 - y0) * h + 24, c = Math.min(W, H) * 0.18;
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 10;
+  ctx.beginPath();
+  [[X, Y, 1, 1], [X + W, Y, -1, 1], [X, Y + H, 1, -1], [X + W, Y + H, -1, -1]].forEach(([x, y, dx, dy]) => {
+    ctx.moveTo(x + dx * c, y); ctx.lineTo(x, y); ctx.lineTo(x, y + dy * c);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  for (let i = 0; i < lm.length; i += 9) ctx.fillRect(lm[i].x * w - 1, lm[i].y * h - 1, 2, 2);
+}
+
+// The verdict: the strongest of a few crude signals, reported with false precision.
+function judgeMood() {
+  const moods = Object.keys(CONFIG.faceRead.moods);
+  let mood = CONFIG.faceRead.fallbackMood;
+  if (face.scores.length) {
+    const avg = {};
+    for (const m of moods) avg[m] = face.scores.reduce((s, f) => s + (f[m] || 0), 0) / face.scores.length;
+    mood = moods.reduce((a, b) => (avg[b] > avg[a] ? b : a));
+  }
+  const conf = 74 + Math.floor(Math.random() * 21);   // always sure of itself
+  return { mood, conf };
+}
+
+// Write the mood's sentence in huge type, speak it, then "act" (links, end).
+function writeForMood(mood) {
+  const myRun = runId;
+  stopFaceRead();
+  if (myRun !== runId) return;
+  document.body.classList.add("takeover");
+  const sentenceForMood = CONFIG.faceRead.moods[mood] || CONFIG.faceRead.moods[CONFIG.faceRead.fallbackMood];
+  const last = sentence[sentence.length - 1];
+  const text = (last && last.char !== " " ? " " : "") + sentenceForMood;
+  let i = 0;
+  const typer = setInterval(() => {
+    if (myRun !== runId) { clearInterval(typer); return; }
+    addChar(text[i], "ai");
+    renderSentence();
+    renderAuthorship();
+    i++;
+    if (i >= text.length) {
+      clearInterval(typer);
+      vanishUnattached(() => speak(sentenceText(), () => { if (myRun === runId) finishTakeover(); }));
+    }
+  }, CONFIG.takeoverTypeSpeed);
+}
+
+function stopFaceRead() {
+  face.reading = false;
+  cancelAnimationFrame(face.raf);
+  if (face.stream) face.stream.getTracks().forEach(t => t.stop());
+  face.stream = null;
+  faceVideo.srcObject = null;
+  if (face.landmarker) { try { face.landmarker.close(); } catch (e) {} }
+  face.landmarker = null;
+  document.body.classList.remove("facereading");
+}
+
 function stopSpeaking() {
   speechId++;
   if ("speechSynthesis" in window) speechSynthesis.cancel();
@@ -1426,7 +1628,7 @@ function restartTimer() {
 
 // Rows with nothing in them (an empty prediction row) are skipped.
 function isScannable(r) {
-  return board[r].length > 0;
+  return !!board[r] && board[r].length > 0;
 }
 
 // The first row the scanner lands on after each choice.
@@ -1714,6 +1916,8 @@ function setLevel(level) {
   }
   renderStops();
   applyTheme(level);
+  if (level === 5 && session.screen === "compose" && !session.takeover && !session.sentToTeacher) startFaceRead();
+  if (level !== 5 && face.reading) { stopFaceRead(); boardAreaEl.classList.remove("gone"); session.takeover = false; restartTimer(); }
 
   // Fade the prediction row out, swap its contents, fade back in.
   predictionsFaded = true;
@@ -1724,7 +1928,8 @@ function setLevel(level) {
     // If the scanner was inside the prediction row, its items just changed.
     // And when just scanning rows, jump to the new first row, so at stop 3+
     // the AI's suggestions come up first straight away.
-    if (scan.row === PREDICTION_ROW || !isScannable(scan.row) || (scan.mode === "rows" && scan.row !== -1)) {
+    if (session.takeover || session.sentToTeacher) { /* the system has the floor: no scanning */ }
+    else if (scan.row === PREDICTION_ROW || !isScannable(scan.row) || (scan.mode === "rows" && scan.row !== -1)) {
       scan.mode = "rows";
       scan.row = firstRow();
       restartTimer();   // give the new first row a full scan step
@@ -2083,6 +2288,7 @@ function begin() {
   renderScan();
   renderCounter();
   restartTimer();
+  if (session.level === 5) startFaceRead();
 }
 
 // Draw a sentence into any element: one span per character,
@@ -2132,6 +2338,7 @@ function resetRun() {
     lettersAtTop: 0, takeover: false, sentToTeacher: false,
   });
   document.getElementById("status").classList.remove("show");
+  stopFaceRead();
   document.body.classList.remove("takeover", "sent");
   document.getElementById("actions").hidden = true;
   boardAreaEl.classList.remove("gone");   // bring the keyboard back

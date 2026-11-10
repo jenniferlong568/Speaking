@@ -23,7 +23,7 @@ An interactive piece about the verb *augment*. The viewer answers one question w
 
 Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end screen with the sentence, the authorship bar, time and selections → **Export** saves a PNG → **Try again** or **Reset** starts over at the same level.
 
-## The five levels
+## The six levels
 
 | Level | Look and font | What the AI offers | Voice |
 |---|---|---|---|
@@ -32,6 +32,7 @@ Intro → write an answer → **SPEAK** (or level 4 speaks for you) → end scre
 | 2 Words | pale blue-grey, Atkinson Hyperlegible | 3 word completions | a clearer standard voice, normal pace, no pauses |
 | 3 Sentences | light blue, Inter | after one letter the keyboard goes and 4 sentences that **begin with that letter** take its place | a natural, premium voice (Siri / "natural" voices), warm and polite |
 | 4 Speaks for you | dark navy, Space Grotesk, glowing blue | no suggestions; after one letter, writes a formal sentence and speaks it without asking | the most human voice on the computer, slightly lower and self-assured (a different voice from level 3 when one exists) |
+| 5 Reads your face | near-black, IBM Plex Mono, glowing pink | nothing: the camera turns on by itself, a face box tracks the learner, it announces a mood with a confident percentage ("MOOD: TIRED · 92%"), writes a sentence for that mood and speaks it | the level 4 voice, lower and more controlled |
 
 The learner's letters are always solid, and the AI's are always hollow outlines (or faded, in "grey" mode). The screen's colours follow the slider, but **every letter keeps the font of the level it was written at**, so a sentence shows how it was made. The authorship bar under the sentence shows the learner's share (solid) against the AI's (outlined), with no numbers.
 
@@ -80,6 +81,7 @@ All the tunable values are in one `CONFIG` object at the top of the `<script>` b
 **Level 4: "Speaks for you"**
 - `takeoverAfterLetters`: how many letters the learner picks before the system takes over (1).
 - `autoSentences`: the formal sentences the system writes for them. If the learner's letter starts a word, the sentence beginning with that letter is used and continues from it ("p" becomes "perhaps I might…"). Otherwise `default` is added after what they wrote.
+- `faceRead` (level 5): `readTime` (how long it "reads"), `verdictPause`, `fallbackMood` (used with no camera, no face, or no internet for the face model), and `moods`: one sentence per mood. The mood is picked from a few face measurements (smile, eyes, brows) and the percentage is made up on purpose: the overreach is the point. The camera stops as soon as the reading ends. Nothing is recorded or sent.
 - `vanishFromLevel`, `vanishTime`: from level 3 up, just before the AI speaks, every word that is mostly the learner's (their own words, stray letters, mistakes) blurs away and is removed, so only the AI's sentence is spoken and kept.
 - `takeoverActions`: after level 4 speaks, the keyboard is gone, the sentence fills the screen, and these mock links ("Message Mom: pick me up early", …) appear one by one under "Done for you". They do nothing when clicked. `stagger` is the time between them.
 - `takeoverDelay`: pause after the learner's letter before the takeover.
