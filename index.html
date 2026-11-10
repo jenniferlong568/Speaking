@@ -318,8 +318,10 @@ body.gaze-active .board { visibility: hidden; }
 .ring .track { stroke: var(--line); }
 .ring .fill  { stroke: var(--focus-line); stroke-dasharray: 100.53px; stroke-dashoffset: 100.53px; }  /* 100.53 = circumference of r=16 */
 
-/* While the system takes over (stop 4), the board stops responding */
-.board.locked, .board.locked + .gaze { opacity: 0.5; transition: opacity 0.4s; }
+/* Level 4 takeover: the keyboard (and camera zones) fade away completely.
+   The learner has no way left to say anything. */
+.board-area { transition: opacity 0.8s; }
+.board-area.gone { opacity: 0; visibility: hidden; transition: opacity 0.8s, visibility 0s 0.8s; }
 
 /* ---------- Intro and end screens (full-screen overlays) ---------- */
 .screen {
@@ -1026,6 +1028,7 @@ function updatePredictions() {
 
 const stripEl   = document.getElementById("strip");
 const boardEl   = document.getElementById("board");
+const boardAreaEl = document.querySelector(".board-area");   // keyboard + camera zones
 const counterEl = document.getElementById("counter");
 
 // Draw the sentence: one <span> per character, classed by author
@@ -1241,7 +1244,7 @@ function startTakeover() {
   clearInterval(scanTimer);
   scan.mode = "rows";
   scan.row = -1;                 // no highlight while the system writes
-  boardEl.classList.add("locked");
+  boardAreaEl.classList.add("gone");   // the keyboard goes away
 
   const last = sentence[sentence.length - 1];
   const before = sentence[sentence.length - 2];
@@ -1280,10 +1283,7 @@ function finishTakeover() {
   session.takeover = false;
   session.sentToTeacher = true;
   document.getElementById("status").classList.add("show");
-  boardEl.classList.remove("locked");
-  updatePredictions();
-  buildBoard();
-  // Leave "Sent to teacher." up for a moment, then the end screen.
+  // The keyboard stays gone. Leave "Sent to teacher." up for a moment, then the end screen.
   later(showEnd, CONFIG.endAfterSent);
 }
 
@@ -1735,7 +1735,7 @@ function resetRun() {
     lettersAtTop: 0, takeover: false, sentToTeacher: false,
   });
   document.getElementById("status").classList.remove("show");
-  boardEl.classList.remove("locked");
+  boardAreaEl.classList.remove("gone");   // bring the keyboard back
   gaze.options = null;
 
   updatePredictions();
