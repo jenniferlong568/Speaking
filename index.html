@@ -234,6 +234,7 @@ body.render-grey .auth-ai { box-shadow: none; background: color-mix(in srgb, var
   padding: 0 12px;
   text-align: center;
 }
+.key.pick-sentence { font-size: clamp(16px, 3.2vh, 34px); letter-spacing: 0.01em; border-style: dashed; padding: 0 24px; }
 .board-row.predictions .key.sentence { flex: 2.2; font-size: clamp(12px, 2vh, 20px); line-height: 1.15; }
 /* Empty prediction row: a faint placeholder, skipped by the scanner */
 .board-row.predictions.empty .key {
@@ -616,6 +617,7 @@ const CONFIG = {
   lettersAtLevel1: 3,     // level 1: single next letters offered
   wordsAtLevel2: 3,       // level 2: word completions offered
   sentencesAtLevel3: 3,   // levels 3-4: full sentences offered (scanned first)
+  sentencesAfterLetter: 4, // level 3: after the first letter the keyboard goes; this many sentences replace it
   // Fallback letter order for level 1 when the phrases have no guess.
   letterFrequency: "etaoinshrdlucmfwypvbgkjqxz",
 
@@ -785,16 +787,24 @@ let sentence = [];
 //   type is "prediction", "letter", "space", "delete" or "speak".
 //   For a prediction, value is the text the AI will add.
 // Row 0 is always the prediction row; it's refilled after every choice.
-const board = [
-  [],   // prediction row (filled by updatePredictions)
-  ...CONFIG.boardLayout.map(row => row.map(label => {
+function keyboardRows() {
+  return CONFIG.boardLayout.map(row => row.map(label => {
     if (label === "SPACE")  return { label, type: "space",  value: " " };
     if (label === "DELETE") return { label, type: "delete", value: null };
     if (label === "SPEAK")  return { label, type: "speak",  value: null };
     return { label, type: "letter", value: label.toLowerCase() };
-  })),
+  }));
+}
+const board = [
+  [],   // prediction row (filled by updatePredictions)
+  ...keyboardRows(),
 ];
 const PREDICTION_ROW = 0;
+
+// Put the normal keyboard back (after level 3's sentence-only mode).
+function restoreKeyboard() {
+  board.splice(1, board.length - 1, ...keyboardRows());
+}
 
 // Where the scanner is.
 //   mode:   "rows"  = highlight moving down the rows
@@ -812,6 +822,7 @@ const session = {
   lettersAtTop: 0,               // learner letters picked while at stop 4
   takeover: false,               // true while the system is writing for the learner
   sentToTeacher: false,          // true once stop 4 has spoken for the learner
+  sentenceMode: false,           // level 3: keyboard gone, only sentences left
   screen: "intro",               // "intro", "compose" or "end"
   endTime: null,                 // when the end screen appeared (freezes the clock)
   endShownAt: 0,                 // for CONFIG.endSpaceLock
@@ -1016,6 +1027,7 @@ function predict(level) {
 
 // Refill the prediction row of the board.
 function updatePredictions() {
+  if (session.sentenceMode) return;   // level 3 after the first letter: the sentence list stays as it is
   board[PREDICTION_ROW] = predict(session.level).map(p => ({
     label: p.label, type: "prediction", kind: p.kind, value: p.insert,
   }));
@@ -1076,7 +1088,7 @@ function buildBoard() {
       if (row.length === 0) {
         // Placeholder so the board doesn't jump when predictions appear.
         rowEl.classList.add("empty");
-        const msg = session.level === 0 ? "augmentation off" : "no predictions";
+        const msg = session.sentenceMode ? "" : session.level === 0 ? "augmentation off" : "no predictions";
         rowEl.innerHTML = `<div class="key">${msg}</div>`;
       }
     }
@@ -1085,6 +1097,7 @@ function buildBoard() {
       key.className = "key";
       if (["space", "delete", "speak"].includes(item.type)) key.classList.add("cmd");
       if (item.kind === "sentence") key.classList.add("sentence");
+      if (item.type === "pick-sentence") key.classList.add("pick-sentence");
       key.textContent = item.label;
       rowEl.appendChild(key);
     });
@@ -1206,6 +1219,20 @@ function chooseItem(r, i) {
     later(showEnd, 400);   // the learner chose to speak: that's the end
   }
   if (item.type === "prediction") addText(item.value, "ai");   // the AI's letters
+  if (item.type === "pick-sentence") {
+    // Level 3: the learner picked one of the machine's sentences. It's added and
+    // spoken straight away; there's no keyboard left to change it.
+    addText(item.value, "ai");
+    renderSentence();
+    renderAuthorship();
+    renderCounter();
+    clearInterval(scanTimer);
+    scan.row = -1;
+    boardAreaEl.classList.add("gone");
+    const myRun = runId;
+    later(() => speak(item.label, () => { if (myRun === runId) later(showEnd, 900); }), 500);
+    return;
+  }
 
   // Predictions change with every choice, so refresh them and the board.
   updatePredictions();
@@ -1214,6 +1241,11 @@ function chooseItem(r, i) {
   renderSentence();
   renderAuthorship();
   renderCounter();
+
+  // Level 3: after the first letter, the keyboard goes and only sentences are left.
+  if (item.type === "letter" && session.level === 3 && !session.sentenceMode) {
+    enterSentenceMode();
+  }
 
   // Stop 4: count the learner's letters, then take over.
   if (item.type === "letter" && session.level === 4 && !session.sentToTeacher) {
@@ -1226,6 +1258,59 @@ function chooseItem(r, i) {
 function flashKey(r, i) {
   const key = boardEl.children[r].children[i];
   key.classList.add("chosen");
+}
+
+
+/* =========================================================
+   LEVEL 3: AFTER ONE LETTER, ONLY SENTENCES ARE LEFT
+   The keyboard fades out and is replaced by the most likely sentences,
+   one per row. The learner can still choose WHICH sentence (that's the
+   difference from level 4), but can no longer write their own.
+   ========================================================= */
+
+// The most likely sentences for what's been typed:
+// 1. phrases that start with exactly what's been typed (they carry on from it),
+// 2. then phrases with a word starting with the learner's last letter,
+// 3. then the top phrases. 2 and 3 are added after what the learner wrote.
+function likelySentences(max) {
+  const typed = sentenceText();
+  const lower = typed.toLowerCase();
+  const letter = lower.trim().slice(-1);
+  const gap = typed === "" || typed.endsWith(" ") ? "" : " ";
+  const out = [];
+  const add = (label, insert) => {
+    if (out.length < max && !out.some(o => o.label === label)) out.push({ label, insert });
+  };
+  for (const ph of CONFIG.phrases) {
+    if (ph.toLowerCase().startsWith(lower) && ph.length > typed.length) add(ph, ph.slice(typed.length));
+  }
+  for (const ph of CONFIG.phrases) {
+    if (ph.toLowerCase().split(/\s+/).some(w => w.startsWith(letter))) add(ph, gap + ph);
+  }
+  for (const ph of CONFIG.phrases) add(ph, gap + ph);
+  return out;
+}
+
+function enterSentenceMode() {
+  session.sentenceMode = true;
+  boardAreaEl.classList.add("gone");                 // the keyboard fades away...
+  clearInterval(scanTimer);
+  scan.mode = "rows";
+  scan.row = -1;
+  renderScan();
+  const sentences = likelySentences(CONFIG.sentencesAfterLetter);
+  later(() => {
+    // ...and comes back as sentences only, one per row.
+    board[PREDICTION_ROW] = [];
+    board.splice(1, board.length - 1,
+      ...sentences.map(sn => [{ label: sn.label, type: "pick-sentence", kind: "sentence", value: sn.insert }]));
+    buildBoard();
+    boardAreaEl.classList.remove("gone");
+    if (gaze.active) { gaze.options = null; renderGaze(true); return; }
+    scan.row = firstRow();
+    renderScan();
+    restartTimer();
+  }, 900);
 }
 
 
@@ -1315,6 +1400,10 @@ function setLevel(level) {
   session.level = level;
   levelInput.value = level;
   if (level === 4) session.lettersAtTop = 0;   // count fresh letters from here
+  if (session.sentenceMode && level !== 3) {   // moving off level 3 gives the keyboard back
+    session.sentenceMode = false;
+    restoreKeyboard();
+  }
   renderStops();
   applyTheme(level);
 
@@ -1736,6 +1825,8 @@ function resetRun() {
   });
   document.getElementById("status").classList.remove("show");
   boardAreaEl.classList.remove("gone");   // bring the keyboard back
+  session.sentenceMode = false;
+  restoreKeyboard();
   gaze.options = null;
 
   updatePredictions();
